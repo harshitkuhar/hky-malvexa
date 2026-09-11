@@ -10,6 +10,7 @@
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       sitecure
  * Requires at least: 6.0
+ * Tested up to:      6.7
  * Requires PHP:      7.4
  */
 
@@ -32,20 +33,6 @@ if ( ! defined( 'SITECURE_BASENAME' ) ) {
 	define( 'SITECURE_BASENAME', plugin_basename( __FILE__ ) );
 }
 
-// Backward compatibility constants
-if ( ! defined( 'WP_DOCTOR_VERSION' ) ) {
-	define( 'WP_DOCTOR_VERSION', SITECURE_VERSION );
-}
-if ( ! defined( 'WP_DOCTOR_PLUGIN_DIR' ) ) {
-	define( 'WP_DOCTOR_PLUGIN_DIR', SITECURE_PLUGIN_DIR );
-}
-if ( ! defined( 'WP_DOCTOR_PLUGIN_URL' ) ) {
-	define( 'WP_DOCTOR_PLUGIN_URL', SITECURE_PLUGIN_URL );
-}
-if ( ! defined( 'WP_DOCTOR_BASENAME' ) ) {
-	define( 'WP_DOCTOR_BASENAME', SITECURE_BASENAME );
-}
-
 /**
  * Self-healing safeguard:
  * If any core SiteCure plugin file was accidentally moved to quarantine, automatically restore it!
@@ -61,7 +48,6 @@ function sitecure_self_heal_missing_files() {
 	$upload_dir = wp_upload_dir();
 	$quarantine_dirs = array(
 		$upload_dir['basedir'] . '/sitecure-quarantine',
-		$upload_dir['basedir'] . '/wp-doctor-quarantine',
 	);
 
 	foreach ( $includes as $file ) {
@@ -103,8 +89,8 @@ foreach ( $sitecure_core_files as $core_file ) {
  * Activation Hook
  */
 function sitecure_on_activation() {
-	if ( function_exists( 'wpdoctor_install_database_tables' ) ) {
-		wpdoctor_install_database_tables();
+	if ( function_exists( 'sitecure_install_database_tables' ) ) {
+		sitecure_install_database_tables();
 	}
 }
 register_activation_hook( __FILE__, 'sitecure_on_activation' );
@@ -114,7 +100,6 @@ register_activation_hook( __FILE__, 'sitecure_on_activation' );
  */
 function sitecure_on_deactivation() {
 	wp_clear_scheduled_hook( 'sitecure_scheduled_scan' );
-	wp_clear_scheduled_hook( 'wpdoctor_scheduled_scan' );
 }
 register_deactivation_hook( __FILE__, 'sitecure_on_deactivation' );
 
@@ -122,11 +107,11 @@ register_deactivation_hook( __FILE__, 'sitecure_on_deactivation' );
  * Initialize SiteCure plugin
  */
 function sitecure_bootstrap() {
-	if ( function_exists( 'wpdoctor_admin_init' ) ) {
-		wpdoctor_admin_init();
+	if ( function_exists( 'sitecure_admin_init' ) ) {
+		sitecure_admin_init();
 	}
-	if ( function_exists( 'wpdoctor_ajax_init' ) ) {
-		wpdoctor_ajax_init();
+	if ( function_exists( 'sitecure_ajax_init' ) ) {
+		sitecure_ajax_init();
 	}
 }
 add_action( 'plugins_loaded', 'sitecure_bootstrap' );

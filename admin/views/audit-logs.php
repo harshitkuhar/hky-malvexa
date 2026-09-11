@@ -1,14 +1,14 @@
 <?php
 /**
- * WP Doctor Audit Logs View
+ * SiteCure Audit Logs View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 global $wpdb;
-$table_audit = wpdoctor_get_table( 'audit_logs' );
-$table_sites = wpdoctor_get_table( 'sites' );
+$table_audit = sitecure_get_table( 'audit_logs' );
+$table_sites = sitecure_get_table( 'sites' );
 
 $logs = $wpdb->get_results( "
 	SELECT a.*, s.name as site_name 
@@ -18,10 +18,10 @@ $logs = $wpdb->get_results( "
 );
 ?>
 
-<div class="wrap wpdoctor-wrap">
+<div class="wrap sitecure-wrap">
 
-	<div class="wpdoctor-header">
-		<div class="wpdoctor-title-area">
+	<div class="sitecure-header">
+		<div class="sitecure-title-area">
 			<h1><span class="dashicons dashicons-list-view"></span> Incident & Audit Log Trail</h1>
 			<p>Immutable audit trail of all diagnostic scans, threat quarantines, core restorations, and operator actions.</p>
 		</div>

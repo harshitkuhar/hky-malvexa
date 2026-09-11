@@ -1,33 +1,33 @@
 <?php
 /**
- * WP Doctor Dashboard View
+ * SiteCure Dashboard View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$stats = wpdoctor_get_dashboard_stats();
-$sites = wpdoctor_get_sites();
+$stats = sitecure_get_dashboard_stats();
+$sites = sitecure_get_sites();
 
 global $wpdb;
-$table_scans = wpdoctor_get_table( 'scans' );
-$table_findings = wpdoctor_get_table( 'findings' );
-$table_sites = wpdoctor_get_table( 'sites' );
+$table_scans = sitecure_get_table( 'scans' );
+$table_findings = sitecure_get_table( 'findings' );
+$table_sites = sitecure_get_table( 'sites' );
 
 $recent_scans = $wpdb->get_results( "SELECT sc.*, s.name as site_name FROM $table_scans sc LEFT JOIN $table_sites s ON sc.site_id = s.id ORDER BY sc.id DESC LIMIT 5" );
-$recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM $table_findings f LEFT JOIN $table_sites s ON f.site_id = s.id WHERE f.status = 'new' AND f.file_path NOT LIKE '%sitecure%' AND f.file_path NOT LIKE '%wp-doctor%' ORDER BY f.id DESC LIMIT 6" );
+$recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM $table_findings f LEFT JOIN $table_sites s ON f.site_id = s.id WHERE f.status = 'new' AND f.file_path NOT LIKE '%sitecure%' ORDER BY f.id DESC LIMIT 6" );
 ?>
 
-<div class="wrap wpdoctor-wrap">
+<div class="wrap sitecure-wrap">
 
 	<!-- Header Banner -->
-	<div class="wpdoctor-header">
-		<div class="wpdoctor-title-area">
-			<h1><span class="dashicons dashicons-shield-alt"></span> SiteCure <span class="wpdoctor-badge">V1.0</span></h1>
+	<div class="sitecure-header">
+		<div class="sitecure-title-area">
+			<h1><span class="dashicons dashicons-shield-alt"></span> SiteCure <span class="sitecure-badge">V1.0</span></h1>
 			<p>WordPress Emergency Diagnosis, Malware Investigation, Cleanup & Recovery Platform</p>
 		</div>
-		<div class="wpdoctor-header-actions" style="display: flex; align-items: center; gap: 10px;">
-			<?php if ( function_exists( 'wpdoctor_is_dev_mode' ) && wpdoctor_is_dev_mode() ) : ?>
+		<div class="sitecure-header-actions" style="display: flex; align-items: center; gap: 10px;">
+			<?php if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) : ?>
 				<span class="wpd-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
 					<span class="dashicons dashicons-superhero" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Developer Unlimited
 				</span>
@@ -50,7 +50,7 @@ $recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM $ta
 	</div>
 
 	<!-- Stats Grid -->
-	<div class="wpdoctor-stats-grid">
+	<div class="sitecure-stats-grid">
 		<div class="wpd-stat-card">
 			<div class="wpd-stat-icon wpd-icon-cyan"><span class="dashicons dashicons-networking"></span></div>
 			<div>

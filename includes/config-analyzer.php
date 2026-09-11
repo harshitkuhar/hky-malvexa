@@ -1,13 +1,13 @@
 <?php
 /**
- * WP Doctor Procedural Configuration Forensics Analyzer
+ * SiteCure Procedural Configuration Forensics Analyzer
  * Inspects wp-config.php, .htaccess, .user.ini, and php.ini for stealth hooks and tampering
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function wpdoctor_analyze_config_file( $full_path, $relative_path ) {
+function sitecure_analyze_config_file( $full_path, $relative_path ) {
 	$findings = array();
 	$filename = basename( $full_path );
 

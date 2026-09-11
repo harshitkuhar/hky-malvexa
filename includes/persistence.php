@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Procedural Persistence Forensics Analyzer
+ * SiteCure Procedural Persistence Forensics Analyzer
  * Inspects MU-plugins, Drop-in files, and WP-Cron events
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Scan Must-Use Plugins and Drop-ins
  */
-function wpdoctor_scan_dropins_and_mu( $wp_path = ABSPATH ) {
+function sitecure_scan_dropins_and_mu( $wp_path = ABSPATH ) {
 	$findings = array();
 
 	$dropins = array(
@@ -27,7 +27,7 @@ function wpdoctor_scan_dropins_and_mu( $wp_path = ABSPATH ) {
 	foreach ( $dropins as $dropin ) {
 		$file = $wp_content_dir . '/' . $dropin;
 		if ( file_exists( $file ) ) {
-			$detected = wpdoctor_scan_file_malware( $file, 'wp-content/' . $dropin );
+			$detected = sitecure_scan_file_malware( $file, 'wp-content/' . $dropin );
 			if ( ! empty( $detected ) ) {
 				$findings = array_merge( $findings, $detected );
 			} else {
@@ -53,7 +53,7 @@ function wpdoctor_scan_dropins_and_mu( $wp_path = ABSPATH ) {
 		if ( ! empty( $files ) ) {
 			foreach ( $files as $file ) {
 				$rel = 'wp-content/mu-plugins/' . basename( $file );
-				$detected = wpdoctor_scan_file_malware( $file, $rel );
+				$detected = sitecure_scan_file_malware( $file, $rel );
 				if ( ! empty( $detected ) ) {
 					$findings = array_merge( $findings, $detected );
 				}
@@ -67,12 +67,12 @@ function wpdoctor_scan_dropins_and_mu( $wp_path = ABSPATH ) {
 /**
  * Inspect WP-Cron for suspicious hooks or malicious callbacks
  */
-function wpdoctor_scan_cron_jobs( $site_id = 0 ) {
+function sitecure_scan_cron_jobs( $site_id = 0 ) {
 	$findings = array();
 
 	$crons = array();
-	if ( ! empty( $site_id ) && function_exists( 'wpdoctor_get_target_db' ) ) {
-		$db = wpdoctor_get_target_db( $site_id );
+	if ( ! empty( $site_id ) && function_exists( 'sitecure_get_target_db' ) ) {
+		$db = sitecure_get_target_db( $site_id );
 		$options_table = $db->prefix . 'options';
 		$cron_opt = $db->get_var( "SELECT option_value FROM `{$options_table}` WHERE option_name = 'cron' LIMIT 1" );
 		if ( ! empty( $cron_opt ) ) {

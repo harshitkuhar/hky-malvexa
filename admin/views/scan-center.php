@@ -1,10 +1,9 @@
 <?php
 /**
- * WP Doctor Scan Center View
- * Unified with Threat Findings & Evidence View
+ * SiteCure Scan Center View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once WP_DOCTOR_PLUGIN_DIR . 'admin/views/findings.php';
+require_once SITECURE_PLUGIN_DIR . 'admin/views/findings.php';

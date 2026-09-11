@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Procedural Core & Package Integrity Analyzer
+ * SiteCure Procedural Core & Package Integrity Analyzer
  * Checks core file hashes against official WordPress.org Checksums API
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,13 +10,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Fetch official checksums for given WordPress version with caching
  */
-function wpdoctor_get_core_checksums( $version = '' ) {
+function sitecure_get_core_checksums( $version = '' ) {
 	if ( empty( $version ) ) {
 		global $wp_version;
 		$version = $wp_version;
 	}
 
-	$transient_key = 'wpdoctor_checksums_' . sanitize_key( $version );
+	$transient_key = 'sitecure_checksums_' . sanitize_key( $version );
 	$cached = get_transient( $transient_key );
 	if ( false !== $cached && is_array( $cached ) ) {
 		return $cached;
@@ -49,7 +49,7 @@ function wpdoctor_get_core_checksums( $version = '' ) {
 /**
  * Verify a single core file against official checksums
  */
-function wpdoctor_verify_core_file( $relative_path, $full_path, $checksums ) {
+function sitecure_verify_core_file( $relative_path, $full_path, $checksums ) {
 	$norm_path = str_replace( '\\', '/', ltrim( $relative_path, '/\\' ) );
 
 	if ( ! isset( $checksums[ $norm_path ] ) ) {

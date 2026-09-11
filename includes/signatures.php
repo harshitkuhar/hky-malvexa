@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Malware Signatures & High-Confidence Detection Rules
+ * SiteCure Malware Signatures & High-Confidence Detection Rules
  * Pure Core PHP procedural definition
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Returns verified high-confidence malware patterns
  */
-function wpdoctor_get_malware_rules() {
+function sitecure_get_malware_rules() {
 	return array(
 		// 1. Classic Webshell signatures
 		array(
@@ -282,12 +282,12 @@ function wpdoctor_get_malware_rules() {
 
 		// 15. Harmless Diagnostic Test String (For Safe Testing & QA)
 		array(
-			'id'             => 'WPDOCTOR_TEST_SIGNATURE',
-			'name'           => 'WP Doctor Diagnostic Test String (Safe QA Test)',
+			'id'             => 'SITECURE_TEST_SIGNATURE',
+			'name'           => 'SiteCure Diagnostic Test String (Safe QA Test)',
 			'severity'       => 'low',
 			'classification' => 'suspicious',
 			'confidence'     => 100,
-			'pattern'        => '/(?:WPDOCTOR_SAFE_)?TEST_STRING_DO_NOT_ALARM/i',
+			'pattern'        => '/(?:SITECURE_SAFE_|SITECURE_SAFE_)?TEST_STRING_DO_NOT_ALARM/i',
 			'description'    => 'Harmless diagnostic test marker for safely testing scanner detection, quarantine, and cleaning pipeline.',
 			'action'         => 'clean',
 		),
@@ -297,7 +297,7 @@ function wpdoctor_get_malware_rules() {
 /**
  * Returns suspicious heuristic patterns requiring review
  */
-function wpdoctor_get_heuristics() {
+function sitecure_get_heuristics() {
 	return array(
 		array(
 			'id'             => 'SUSP_HEX_ENCODED_STRING_CASCADE',

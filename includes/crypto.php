@@ -1,21 +1,21 @@
 <?php
 /**
- * WP Doctor Procedural Cryptography Helper
+ * SiteCure Procedural Cryptography Helper
  * AES-256 encryption at rest for remote SFTP/SSH/DB credentials
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function wpdoctor_get_crypto_key() {
-	$secret = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'wp-doctor-fallback-key-salt-982143';
+function sitecure_get_crypto_key() {
+	$secret = defined( 'AUTH_KEY' ) ? AUTH_KEY : 'sitecure-fallback-key-salt-982143';
 	return hash( 'sha256', $secret, true );
 }
 
 /**
  * Encrypt sensitive string
  */
-function wpdoctor_encrypt( $plaintext ) {
+function sitecure_encrypt( $plaintext ) {
 	if ( empty( $plaintext ) ) {
 		return '';
 	}
@@ -25,7 +25,7 @@ function wpdoctor_encrypt( $plaintext ) {
 	}
 
 	$method = 'aes-256-cbc';
-	$key = wpdoctor_get_crypto_key();
+	$key = sitecure_get_crypto_key();
 	$iv_len = openssl_cipher_iv_length( $method );
 	$iv = openssl_random_pseudo_bytes( $iv_len );
 
@@ -36,7 +36,7 @@ function wpdoctor_encrypt( $plaintext ) {
 /**
  * Decrypt sensitive string
  */
-function wpdoctor_decrypt( $encrypted_base64 ) {
+function sitecure_decrypt( $encrypted_base64 ) {
 	if ( empty( $encrypted_base64 ) ) {
 		return '';
 	}
@@ -47,7 +47,7 @@ function wpdoctor_decrypt( $encrypted_base64 ) {
 
 	$raw = base64_decode( $encrypted_base64 );
 	$method = 'aes-256-cbc';
-	$key = wpdoctor_get_crypto_key();
+	$key = sitecure_get_crypto_key();
 	$iv_len = openssl_cipher_iv_length( $method );
 
 	if ( strlen( $raw ) < $iv_len ) {

@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Plugin Uninstaller
+ * SiteCure Plugin Uninstaller
  * Executed when the user clicks "Delete" on the Plugins page.
  * Completely purges all data, database tables, options, transients, and files from the host server.
  */
@@ -13,7 +13,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 /**
  * Recursively delete a directory and all of its contents
  */
-function wpdoctor_uninstall_recursive_rmdir( $dir ) {
+function sitecure_uninstall_recursive_rmdir( $dir ) {
 	if ( ! is_dir( $dir ) ) {
 		return;
 	}
@@ -30,7 +30,7 @@ function wpdoctor_uninstall_recursive_rmdir( $dir ) {
 
 		$path = $dir . DIRECTORY_SEPARATOR . $item;
 		if ( is_dir( $path ) ) {
-			wpdoctor_uninstall_recursive_rmdir( $path );
+			sitecure_uninstall_recursive_rmdir( $path );
 		} else {
 			@unlink( $path );
 		}
@@ -40,15 +40,15 @@ function wpdoctor_uninstall_recursive_rmdir( $dir ) {
 }
 
 /**
- * Purge all WP Doctor database tables, options, and filesystem data for current site
+ * Purge all SiteCure database tables, options, and filesystem data for current site
  */
-function wpdoctor_uninstall_purge_site_data() {
+function sitecure_uninstall_purge_site_data() {
 	global $wpdb;
 
 	$host_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 
 	// 1. Purge quarantine vaults from all client/external sites BEFORE dropping tables
-	$table_sites = $wpdb->prefix . 'wpdoctor_sites';
+	$table_sites = $wpdb->prefix . 'sitecure_sites';
 	if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table_sites}'" ) === $table_sites ) {
 		$client_sites = $wpdb->get_results( "SELECT * FROM `{$table_sites}`" );
 		if ( ! empty( $client_sites ) ) {
@@ -73,11 +73,10 @@ function wpdoctor_uninstall_purge_site_data() {
 					// Remove the quarantine directories on the client site
 					$client_quarantines = array(
 						$site_root . '/wp-content/uploads/sitecure-quarantine',
-						$site_root . '/wp-content/uploads/wp-doctor-quarantine',
 					);
 					foreach ( $client_quarantines as $cq ) {
 						if ( is_dir( $cq ) ) {
-							wpdoctor_uninstall_recursive_rmdir( $cq );
+							sitecure_uninstall_recursive_rmdir( $cq );
 						}
 					}
 				}
@@ -90,37 +89,31 @@ function wpdoctor_uninstall_purge_site_data() {
 	if ( ! empty( $upload_dir['basedir'] ) ) {
 		$host_quarantines = array(
 			$upload_dir['basedir'] . '/sitecure-quarantine',
-			$upload_dir['basedir'] . '/wp-doctor-quarantine',
 		);
 		foreach ( $host_quarantines as $hq ) {
 			if ( is_dir( $hq ) ) {
-				wpdoctor_uninstall_recursive_rmdir( $hq );
+				sitecure_uninstall_recursive_rmdir( $hq );
 			}
 		}
 	}
 	$root_quarantines = array(
 		$host_root . '/wp-content/uploads/sitecure-quarantine',
-		$host_root . '/wp-content/uploads/wp-doctor-quarantine',
 	);
 	foreach ( $root_quarantines as $rq ) {
 		if ( is_dir( $rq ) ) {
-			wpdoctor_uninstall_recursive_rmdir( $rq );
+			sitecure_uninstall_recursive_rmdir( $rq );
 		}
 	}
 
 	// 3. Clear any registered scheduled cron tasks
 	wp_clear_scheduled_hook( 'sitecure_scheduled_scan' );
-	wp_clear_scheduled_hook( 'wpdoctor_scheduled_scan' );
 
 	// 4. Delete all options, settings, and transients from wp_options
 	$wpdb->query(
 		"DELETE FROM `{$wpdb->options}` 
 		WHERE option_name LIKE 'sitecure_%' 
 		   OR option_name LIKE '_transient_sitecure_%' 
-		   OR option_name LIKE '_transient_timeout_sitecure_%'
-		   OR option_name LIKE 'wpdoctor_%' 
-		   OR option_name LIKE '_transient_wpdoctor_%' 
-		   OR option_name LIKE '_transient_timeout_wpdoctor_%'"
+		   OR option_name LIKE '_transient_timeout_sitecure_%'"
 	);
 
 	// Multisite network sitemeta cleanup if table exists
@@ -129,21 +122,12 @@ function wpdoctor_uninstall_purge_site_data() {
 			"DELETE FROM `{$wpdb->sitemeta}`
 			WHERE meta_key LIKE 'sitecure_%'
 			   OR meta_key LIKE '_transient_sitecure_%'
-			   OR meta_key LIKE '_transient_timeout_sitecure_%'
-			   OR meta_key LIKE 'wpdoctor_%'
-			   OR meta_key LIKE '_transient_wpdoctor_%'
-			   OR meta_key LIKE '_transient_timeout_wpdoctor_%'"
+			   OR meta_key LIKE '_transient_timeout_sitecure_%'"
 		);
 	}
 
 	// 5. Drop all custom database tables
 	$tables = array(
-		$wpdb->prefix . 'wpdoctor_sites',
-		$wpdb->prefix . 'wpdoctor_connections',
-		$wpdb->prefix . 'wpdoctor_scans',
-		$wpdb->prefix . 'wpdoctor_findings',
-		$wpdb->prefix . 'wpdoctor_quarantine',
-		$wpdb->prefix . 'wpdoctor_audit_logs',
 		$wpdb->prefix . 'sitecure_sites',
 		$wpdb->prefix . 'sitecure_connections',
 		$wpdb->prefix . 'sitecure_scans',
@@ -156,16 +140,10 @@ function wpdoctor_uninstall_purge_site_data() {
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 	}
 
-	// Dynamic fallback: Drop any remaining tables starting with prefix + sitecure_ or wpdoctor_
+	// Dynamic fallback: Drop any remaining tables starting with prefix + sitecure_
 	$wildcard_tables = $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->prefix}sitecure_%'" );
 	if ( ! empty( $wildcard_tables ) ) {
 		foreach ( $wildcard_tables as $tbl ) {
-			$wpdb->query( "DROP TABLE IF EXISTS `{$tbl}`" );
-		}
-	}
-	$wildcard_tables_legacy = $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->prefix}wpdoctor_%'" );
-	if ( ! empty( $wildcard_tables_legacy ) ) {
-		foreach ( $wildcard_tables_legacy as $tbl ) {
 			$wpdb->query( "DROP TABLE IF EXISTS `{$tbl}`" );
 		}
 	}
@@ -177,12 +155,12 @@ if ( is_multisite() ) {
 	if ( ! empty( $sites ) ) {
 		foreach ( $sites as $site ) {
 			switch_to_blog( (int) $site->blog_id );
-			wpdoctor_uninstall_purge_site_data();
+			sitecure_uninstall_purge_site_data();
 			restore_current_blog();
 		}
 	} else {
-		wpdoctor_uninstall_purge_site_data();
+		sitecure_uninstall_purge_site_data();
 	}
 } else {
-	wpdoctor_uninstall_purge_site_data();
+	sitecure_uninstall_purge_site_data();
 }

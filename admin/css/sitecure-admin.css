@@ -1,6 +1,6 @@
 /**
- * WP Doctor Modern Light Theme Stylesheet
- * Crisp, clean, professional SaaS interface matching native WordPress aesthetic
+ * SiteCure Modern Light Theme Stylesheet
+ * Clean SaaS dashboard styling with polished cards, badges, and typography
  */
 
 :root {
@@ -27,14 +27,14 @@
   --wpd-purple-border: #ddd6fe;
 }
 
-.wpdoctor-wrap {
+.sitecure-wrap {
   margin: 20px 20px 0 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   color: var(--wpd-text-main);
 }
 
 /* Header Banner */
-.wpdoctor-header {
+.sitecure-header {
   background: #ffffff;
   border: 1px solid var(--wpd-card-border);
   border-left: 4px solid var(--wpd-primary);
@@ -47,7 +47,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.wpdoctor-title-area h1 {
+.sitecure-title-area h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
@@ -57,14 +57,14 @@
   gap: 12px;
 }
 
-.wpdoctor-title-area h1 .dashicons {
+.sitecure-title-area h1 .dashicons {
   font-size: 28px;
   width: 28px;
   height: 28px;
   color: var(--wpd-primary);
 }
 
-.wpdoctor-badge {
+.sitecure-badge {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -76,13 +76,13 @@
   font-weight: 600;
 }
 
-.wpdoctor-header p {
+.sitecure-header p {
   margin: 6px 0 0 0;
   color: var(--wpd-text-muted);
   font-size: 13px;
 }
 
-.wpdoctor-header-actions {
+.sitecure-header-actions {
   display: flex;
   gap: 12px;
 }
@@ -145,7 +145,7 @@
 }
 
 /* Stats Cards Grid */
-.wpdoctor-stats-grid {
+.sitecure-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;
@@ -411,7 +411,8 @@
 .wpd-modal {
   background: #ffffff;
   border: 1px solid #cbd5e1;
-  border-radius: 12px;
+  border-radius: 14px;
+  overflow: hidden;
   width: 100%;
   max-width: 850px;
   max-height: 88vh;
@@ -419,7 +420,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
   animation: wpdModalIn 0.15s ease-out;
 }
 
@@ -441,6 +442,9 @@
   justify-content: space-between;
   align-items: center;
   background: #f8fafc;
+  border-top-left-radius: 13px;
+  border-top-right-radius: 13px;
+  flex-shrink: 0;
 }
 
 .wpd-modal-title {
@@ -466,6 +470,32 @@
 .wpd-modal-body {
   padding: 20px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.wpd-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.wpd-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.wpd-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
+
+.wpd-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.wpd-modal-body::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .wpd-code-container {

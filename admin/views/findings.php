@@ -1,29 +1,27 @@
 <?php
 /**
- * WP Doctor Findings & Evidence View
- * Filterable per-site with clean light theme styling
+ * SiteCure Findings & Evidence View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 global $wpdb;
-$table_findings = wpdoctor_get_table( 'findings' );
-$table_sites = wpdoctor_get_table( 'sites' );
+$table_findings = sitecure_get_table( 'findings' );
+$table_sites = sitecure_get_table( 'sites' );
 
-$sites = wpdoctor_get_sites();
+$sites = sitecure_get_sites();
 $selected_site_id = isset( $_GET['site_id'] ) ? (int) $_GET['site_id'] : 0;
 $status_filter = isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : 'new';
 
 // Auto-reopen any restored findings so they immediately appear in Active / Unresolved
 $wpdb->query( "UPDATE $table_findings SET status = 'new' WHERE status = 'restored'" );
 
-$table_quarantine = wpdoctor_get_table( 'quarantine' );
+$table_quarantine = sitecure_get_table( 'quarantine' );
 
 // Build filtered query
 $where_clauses = array(
 	"f.file_path NOT LIKE '%%sitecure%%'",
-	"f.file_path NOT LIKE '%%wp-doctor%%'",
 );
 $query_params = array();
 
@@ -54,19 +52,19 @@ $findings = $wpdb->get_results( $query );
 
 // Counts for tabs (preserving site filter)
 $site_where = ( $selected_site_id > 0 ) ? $wpdb->prepare( "AND site_id = %d", $selected_site_id ) : '';
-$count_new = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new' AND file_path NOT LIKE '%%sitecure%%' AND file_path NOT LIKE '%%wp-doctor%%' $site_where" );
-$count_quarantined = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status IN ('quarantined', 'cleaned') AND file_path NOT LIKE '%%sitecure%%' AND file_path NOT LIKE '%%wp-doctor%%' $site_where" );
+$count_new = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new' AND file_path NOT LIKE '%%sitecure%%' $site_where" );
+$count_quarantined = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status IN ('quarantined', 'cleaned') AND file_path NOT LIKE '%%sitecure%%' $site_where" );
 ?>
 
-<div class="wrap wpdoctor-wrap">
+<div class="wrap sitecure-wrap">
 
-	<div class="wpdoctor-header">
-		<div class="wpdoctor-title-area">
+	<div class="sitecure-header">
+		<div class="sitecure-title-area">
 			<h1><span class="dashicons dashicons-shield"></span> Scan Center & Threat Findings</h1>
 			<p>Execute live emergency scans, inspect threat evidence, and take safe remediation actions all in one place.</p>
 		</div>
-		<div class="wpdoctor-header-actions" style="display: flex; align-items: center; gap: 10px;">
-			<?php if ( function_exists( 'wpdoctor_is_dev_mode' ) && wpdoctor_is_dev_mode() ) : ?>
+		<div class="sitecure-header-actions" style="display: flex; align-items: center; gap: 10px;">
+			<?php if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) : ?>
 				<span class="wpd-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
 					<span class="dashicons dashicons-superhero" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Developer Unlimited
 				</span>

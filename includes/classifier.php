@@ -1,13 +1,13 @@
 <?php
 /**
- * WP Doctor Procedural File Classifier
+ * SiteCure Procedural File Classifier
  * Classifies files as CORE, PLUGIN, THEME, UPLOAD, CONFIG, CUSTOM or UNKNOWN
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function wpdoctor_classify_file( $relative_path ) {
+function sitecure_classify_file( $relative_path ) {
 	$norm_path = str_replace( '\\', '/', ltrim( $relative_path, '/\\' ) );
 
 	// Config files

@@ -1,10 +1,11 @@
 /**
- * WP Doctor Admin JavaScript Controller
+ * SiteCure Admin JavaScript Controller
  * Pure vanilla jQuery handling chunked batched scanning, modals, and actions
  */
 (function ($) {
   'use strict';
 
+  var sitecure_data = window.sitecure_data || {};
   var currentScanId = 0;
   var isScanning = false;
 
@@ -41,15 +42,15 @@
       var btn = $(this);
       var findingId = btn.data('id');
 
-      if (!confirm('Are you sure you want to clean this threat? WP Doctor will create a safety backup in Quarantine Vault and safely neutralize the malicious code/spam.')) {
+      if (!confirm('Are you sure you want to clean this threat? SiteCure will create a safety backup in Quarantine Vault and safely neutralize the malicious code/spam.')) {
         return;
       }
 
       btn.prop('disabled', true).text('Cleaning...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_clean_file',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_clean_file',
+        nonce: sitecure_data.nonce,
         finding_id: findingId
       }, function (res) {
         if (res.success) {
@@ -68,15 +69,15 @@
       var btn = $(this);
       var findingId = btn.data('id');
 
-      if (!confirm(wpdoctor_data.strings.confirm_q)) {
+      if (!confirm(sitecure_data.strings.confirm_q)) {
         return;
       }
 
       btn.prop('disabled', true).text('Quarantining...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_quarantine_file',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_quarantine_file',
+        nonce: sitecure_data.nonce,
         finding_id: findingId
       }, function (res) {
         if (res.success) {
@@ -95,15 +96,15 @@
       var btn = $(this);
       var qId = btn.data('id');
 
-      if (!confirm(wpdoctor_data.strings.confirm_r)) {
+      if (!confirm(sitecure_data.strings.confirm_r)) {
         return;
       }
 
       btn.prop('disabled', true).text('Restoring...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_restore_file',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_restore_file',
+        nonce: sitecure_data.nonce,
         quarantine_id: qId
       }, function (res) {
         if (res.success) {
@@ -113,6 +114,10 @@
           alert('Error: ' + (res.data ? res.data.message : 'Unknown error'));
           btn.prop('disabled', false).text('Restore');
         }
+      }).fail(function (xhr) {
+        var msg = (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) ? xhr.responseJSON.data.message : 'Server returned status ' + xhr.status;
+        alert('Restore failed: ' + msg);
+        btn.prop('disabled', false).text('Restore');
       });
     });
 
@@ -123,15 +128,15 @@
       var filePath = btn.data('path');
       var siteId = btn.data('site') || 0;
 
-      if (!confirm(wpdoctor_data.strings.confirm_c)) {
+      if (!confirm(sitecure_data.strings.confirm_c)) {
         return;
       }
 
       btn.prop('disabled', true).text('Downloading...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_repair_core',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_repair_core',
+        nonce: sitecure_data.nonce,
         file_path: filePath,
         site_id: siteId
       }, function (res) {
@@ -151,9 +156,9 @@
       var btn = $(this);
       btn.prop('disabled', true).text('Verifying...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_verify_site',
-        nonce: wpdoctor_data.nonce
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_verify_site',
+        nonce: sitecure_data.nonce
       }, function (res) {
         btn.prop('disabled', false).text('Run Health Verification');
         if (res.success) {
@@ -200,9 +205,9 @@
       var btn = $(this);
       btn.prop('disabled', true).text('Registering site...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_register_local_site',
-        nonce: wpdoctor_data.nonce
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_register_local_site',
+        nonce: sitecure_data.nonce
       }, function (res) {
         if (res.success) {
           alert(res.data.message);
@@ -226,9 +231,9 @@
       }
 
       btn.prop('disabled', true);
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_delete_site',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_delete_site',
+        nonce: sitecure_data.nonce,
         site_id: siteId
       }, function (res) {
         if (res.success) {
@@ -264,9 +269,9 @@
       var btn = $(this);
       btn.prop('disabled', true).text('Activating...');
 
-      $.post(wpdoctor_data.ajax_url, {
-        action: 'wpdoctor_activate_license',
-        nonce: wpdoctor_data.nonce,
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_activate_license',
+        nonce: sitecure_data.nonce,
         license_key: key
       }, function (res) {
         if (res.success) {
@@ -281,12 +286,34 @@
       });
     });
 
+    // Deactivate License Key (1-Click revert to Free plan)
+    $(document).on('click', '#wpd-btn-deactivate-license', function (e) {
+      e.preventDefault();
+      if (!confirm('Are you sure you want to deactivate your license and revert back to the Free plan (1 active site)?')) {
+        return;
+      }
+      var btn = $(this);
+      btn.prop('disabled', true).text('Deactivating...');
+
+      $.post(sitecure_data.ajax_url, {
+        action: 'sitecure_deactivate_license',
+        nonce: sitecure_data.nonce
+      }, function (res) {
+        if (res.success) {
+          location.reload();
+        } else {
+          alert(res.data ? res.data.message : 'Deactivation failed.');
+          btn.prop('disabled', false).text('Deactivate Key');
+        }
+      });
+    });
+
     $('#wpd-form-add-site').on('submit', function (e) {
       e.preventDefault();
       var form = $(this);
-      var data = form.serialize() + '&action=wpdoctor_save_site&nonce=' + wpdoctor_data.nonce;
+      var data = form.serialize() + '&action=sitecure_save_site&nonce=' + sitecure_data.nonce;
 
-      $.post(wpdoctor_data.ajax_url, data, function (res) {
+      $.post(sitecure_data.ajax_url, data, function (res) {
         if (res.success) {
           alert(res.data.message);
           location.reload();
@@ -310,9 +337,9 @@
     $('#wpd-scan-terminal').empty();
     logTerminal('Initializing emergency scan pipeline...', 'log-warning');
 
-    $.post(wpdoctor_data.ajax_url, {
-      action: 'wpdoctor_start_scan',
-      nonce: wpdoctor_data.nonce,
+    $.post(sitecure_data.ajax_url, {
+      action: 'sitecure_start_scan',
+      nonce: sitecure_data.nonce,
       site_id: siteId,
       scan_type: scanType
     }, function (res) {
@@ -343,9 +370,9 @@
    * Process scan in batches of files
    */
   function runBatch(scanId, batchSize) {
-    $.post(wpdoctor_data.ajax_url, {
-      action: 'wpdoctor_batch_scan',
-      nonce: wpdoctor_data.nonce,
+    $.post(sitecure_data.ajax_url, {
+      action: 'sitecure_batch_scan',
+      nonce: sitecure_data.nonce,
       scan_id: scanId,
       batch_size: batchSize
     }, function (res) {
@@ -407,9 +434,9 @@
     // Enforce centered viewport modal
     $('#wpd-code-modal').addClass('is-active').css('display', 'flex').hide().fadeIn(150);
 
-    $.post(wpdoctor_data.ajax_url, {
-      action: 'wpdoctor_view_code',
-      nonce: wpdoctor_data.nonce,
+    $.post(sitecure_data.ajax_url, {
+      action: 'sitecure_view_code',
+      nonce: sitecure_data.nonce,
       finding_id: findingId
     }, function (res) {
       if (res.success) {
@@ -434,7 +461,13 @@
           $('#wpd-code-modal-evidence-box').hide();
         }
 
-        $('#wpd-code-modal-content').html(d.code_html);
+        var codeHtml = d.code_html;
+        if (!codeHtml && d.code_snippet) {
+          codeHtml = '<pre style="margin:0;padding:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;color:#e2e8f0;font-size:12px;line-height:1.5;">' + $('<div>').text(d.code_snippet).html() + '</pre>';
+        } else if (!codeHtml) {
+          codeHtml = '<div style="padding:20px;color:#94a3b8;text-align:center;">No direct code preview available for this item.</div>';
+        }
+        $('#wpd-code-modal-content').html(codeHtml);
 
         var actionsHtml = '';
         if (d.status === 'new' || d.status === 'restored') {

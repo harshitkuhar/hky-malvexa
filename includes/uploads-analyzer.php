@@ -1,13 +1,13 @@
 <?php
 /**
- * WP Doctor Procedural Uploads Directory Analyzer
+ * SiteCure Procedural Uploads Directory Analyzer
  * Detects rogue executables, disguised extensions, and unauthorized .htaccess in wp-content/uploads/
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function wpdoctor_analyze_upload_file( $full_path, $relative_path ) {
+function sitecure_analyze_upload_file( $full_path, $relative_path ) {
 	$findings = array();
 
 	$full_path = str_replace( '\\', '/', $full_path );

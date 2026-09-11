@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function sitecure_get_install_id() {
 	$install_id = get_option( 'sitecure_install_id', '' );
 	if ( empty( $install_id ) ) {
-		$install_id = get_option( 'wpdoctor_install_id', '' );
+		$install_id = get_option( 'sitecure_install_id', '' );
 	}
 
 	if ( empty( $install_id ) ) {
@@ -83,14 +83,14 @@ function sitecure_cloud_register_domain( $domain_or_url ) {
 	}
 
 	// Developer Mode Bypass: Local or Master Key
-	if ( function_exists( 'wpdoctor_is_dev_mode' ) && wpdoctor_is_dev_mode() ) {
+	if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) {
 		return true;
 	}
 
 	$endpoint = sitecure_get_cloud_endpoint() . '/api/register';
 	$license  = get_option( 'sitecure_pro_license_key', '' );
 	if ( empty( $license ) ) {
-		$license = get_option( 'wpdoctor_pro_license_key', '' );
+		$license = get_option( 'sitecure_pro_license_key', '' );
 	}
 
 	$payload = array(
@@ -112,7 +112,7 @@ function sitecure_cloud_register_domain( $domain_or_url ) {
 
 	// Graceful Offline Fallback: If cloud server is down or network unavailable, check local database quota
 	if ( is_wp_error( $response ) ) {
-		if ( function_exists( 'wpdoctor_can_add_site' ) && wpdoctor_can_add_site() ) {
+		if ( function_exists( 'sitecure_can_add_site' ) && sitecure_can_add_site() ) {
 			return true;
 		}
 		return new WP_Error( 'quota_reached', __( 'Free plan limit reached (1 site). Upgrade to SiteCure Pro to manage multiple websites.', 'sitecure' ) );
@@ -133,7 +133,7 @@ function sitecure_cloud_register_domain( $domain_or_url ) {
 	}
 
 	// Fallback to local quota check
-	if ( function_exists( 'wpdoctor_can_add_site' ) && wpdoctor_can_add_site() ) {
+	if ( function_exists( 'sitecure_can_add_site' ) && sitecure_can_add_site() ) {
 		return true;
 	}
 
@@ -147,7 +147,7 @@ function sitecure_cloud_register_domain( $domain_or_url ) {
  * @return true|WP_Error
  */
 function sitecure_cloud_verify_domain( $domain_or_url ) {
-	if ( function_exists( 'wpdoctor_is_dev_mode' ) && wpdoctor_is_dev_mode() ) {
+	if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) {
 		return true;
 	}
 
@@ -165,7 +165,7 @@ function sitecure_cloud_verify_domain( $domain_or_url ) {
 	$endpoint = sitecure_get_cloud_endpoint() . '/api/verify';
 	$license  = get_option( 'sitecure_pro_license_key', '' );
 	if ( empty( $license ) ) {
-		$license = get_option( 'wpdoctor_pro_license_key', '' );
+		$license = get_option( 'sitecure_pro_license_key', '' );
 	}
 
 	$payload = array(
@@ -219,7 +219,7 @@ function sitecure_cloud_release_domain( $domain_or_url ) {
 		delete_transient( 'sitecure_ver_' . md5( $domain ) );
 	}
 
-	if ( function_exists( 'wpdoctor_is_dev_mode' ) && wpdoctor_is_dev_mode() ) {
+	if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) {
 		return true;
 	}
 
@@ -250,20 +250,10 @@ function sitecure_cloud_release_domain( $domain_or_url ) {
  * @return array
  */
 function sitecure_cloud_check_license( $license_key ) {
-	$clean = strtoupper( trim( $license_key ) );
-	if ( $clean === 'SITECURE-DEV-UNLIMITED' || $clean === 'WPDOCTOR-DEV-UNLIMITED' ) {
-		return array(
-			'valid'   => true,
-			'tier'    => 'developer',
-			'quota'   => 9999,
-			'message' => 'Developer Master Key verified.',
-		);
-	}
-
 	$endpoint = sitecure_get_cloud_endpoint() . '/api/license';
 	$payload  = array(
 		'action'      => 'license_check',
-		'license_key' => $license_key,
+		'license_key' => sanitize_text_field( $license_key ),
 	);
 
 	$response = wp_remote_post(
@@ -278,12 +268,18 @@ function sitecure_cloud_check_license( $license_key ) {
 	if ( is_wp_error( $response ) ) {
 		return array(
 			'valid'   => false,
-			'message' => __( 'Could not connect to license server. Please try again.', 'sitecure' ),
+			'message' => __( 'Could not connect to license server. Please verify your connection and try again.', 'sitecure' ),
 		);
 	}
 
 	$body = wp_remote_retrieve_body( $response );
 	$data = json_decode( $body, true );
 
+	if ( is_array( $data ) && ! empty( $data['valid'] ) ) {
+		set_transient( 'sitecure_pro_verified', true, 14 * DAY_IN_SECONDS );
+		return $data;
+	}
+
+	delete_transient( 'sitecure_pro_verified' );
 	return is_array( $data ) ? $data : array( 'valid' => false, 'message' => __( 'Invalid license server response.', 'sitecure' ) );
 }

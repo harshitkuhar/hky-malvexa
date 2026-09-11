@@ -1,33 +1,33 @@
 <?php
 /**
- * WP Doctor Quarantine Vault View
+ * SiteCure Quarantine Vault View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 // Auto-sync any cleaned findings that don't have vault rows yet
-if ( function_exists( 'wpdoctor_sync_cleaned_findings_to_vault' ) ) {
-	wpdoctor_sync_cleaned_findings_to_vault();
+if ( function_exists( 'sitecure_sync_cleaned_findings_to_vault' ) ) {
+	sitecure_sync_cleaned_findings_to_vault();
 }
 
 global $wpdb;
-$table_quarantine = wpdoctor_get_table( 'quarantine' );
-$table_sites      = wpdoctor_get_table( 'sites' );
+$table_quarantine = sitecure_get_table( 'quarantine' );
+$table_sites      = sitecure_get_table( 'sites' );
 
 $items = $wpdb->get_results( "
 	SELECT q.*, s.name as site_name 
 	FROM $table_quarantine q 
 	LEFT JOIN $table_sites s ON q.site_id = s.id 
-	WHERE q.original_path NOT LIKE '%sitecure%' AND q.original_path NOT LIKE '%wp-doctor%' 
+	WHERE q.original_path NOT LIKE '%sitecure%' 
 	ORDER BY q.id DESC" 
 );
 ?>
 
-<div class="wrap wpdoctor-wrap">
+<div class="wrap sitecure-wrap">
 
-	<div class="wpdoctor-header">
-		<div class="wpdoctor-title-area">
+	<div class="sitecure-header">
+		<div class="sitecure-title-area">
 			<h1><span class="dashicons dashicons-lock"></span> Quarantine Storage Vault</h1>
 			<p>Secure isolated repository protected by execution-denial directives. Recover or rollback any quarantined or cleaned item anytime.</p>
 		</div>

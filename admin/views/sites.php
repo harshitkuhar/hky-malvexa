@@ -1,30 +1,33 @@
 <?php
 /**
- * WP Doctor Managed Sites View
+ * SiteCure Managed Sites View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$sites        = wpdoctor_get_sites();
-$is_dev       = wpdoctor_is_dev_mode();
-$quota        = wpdoctor_get_site_quota();
-$can_add      = wpdoctor_can_add_site();
+$sites        = sitecure_get_sites();
+$is_dev       = sitecure_is_dev_mode();
+$quota        = sitecure_get_site_quota();
+$can_add      = sitecure_can_add_site();
 $active_count = count( $sites );
 ?>
 
-<div class="wrap wpdoctor-wrap">
+<div class="wrap sitecure-wrap">
 
-	<div class="wpdoctor-header">
-		<div class="wpdoctor-title-area">
+	<div class="sitecure-header">
+		<div class="sitecure-title-area">
 			<h1><span class="dashicons dashicons-networking"></span> Managed WordPress Sites</h1>
 			<p>Configure local or remote WordPress sites for diagnosis, malware cleaning, and health monitoring.</p>
 		</div>
-		<div class="wpdoctor-header-actions" style="display: flex; align-items: center; gap: 10px;">
+		<div class="sitecure-header-actions" style="display: flex; align-items: center; gap: 10px;">
 			<?php if ( $is_dev ) : ?>
 				<span class="wpd-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
 					<span class="dashicons dashicons-superhero" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Developer Unlimited Access
 				</span>
+				<button type="button" id="wpd-btn-deactivate-license" class="wpd-btn wpd-btn-secondary wpd-btn-sm" style="font-size: 11px; padding: 4px 10px; border-radius: 20px; color: #64748b;" title="Deactivate License and return to Free plan">
+					<span class="dashicons dashicons-dismiss" style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle; margin-right: 2px;"></span> Deactivate Key
+				</button>
 			<?php else : ?>
 				<span class="wpd-badge" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
 					<span class="dashicons dashicons-admin-site" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Free Plan: <?php echo (int) $active_count; ?>/1 Site Active
@@ -234,7 +237,7 @@ $active_count = count( $sites );
 <!-- Pro Upgrade / Multi-Site Modal -->
 <div id="wpd-pro-upgrade-modal" class="wpd-modal-backdrop">
 	<div class="wpd-modal" style="max-width: 540px;">
-		<div class="wpd-modal-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff;">
+		<div class="wpd-modal-header" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); color: #fff; border-top-left-radius: 13px; border-top-right-radius: 13px; border-bottom: none;">
 			<div>
 				<h3 class="wpd-modal-title" style="color: #fff; display: flex; align-items: center; gap: 8px;">
 					<span class="dashicons dashicons-star-filled" style="color: #fbbf24;"></span>
@@ -282,7 +285,7 @@ $active_count = count( $sites );
 					Already have a Pro or Developer License Key?
 				</label>
 				<div style="display: flex; gap: 8px;">
-					<input type="text" id="wpd-license-key" class="wpd-input" placeholder="e.g. WPDOCTOR-DEV-UNLIMITED" style="font-size: 12.5px; font-family: monospace;">
+					<input type="text" id="wpd-license-key" class="wpd-input" placeholder="Enter your SiteCure Pro license key" style="font-size: 12.5px; font-family: monospace;">
 					<button type="button" id="wpd-btn-activate-license" class="wpd-btn wpd-btn-secondary" style="white-space: nowrap; font-size: 12px;">
 						Activate Key
 					</button>

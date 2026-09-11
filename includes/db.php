@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Procedural Database Handler
+ * SiteCure Procedural Database Handler
  * Dedicated custom tables using $wpdb
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,31 +10,36 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Get table name with prefix
  */
-function wpdoctor_get_table( $name ) {
+function sitecure_get_table( $name ) {
 	global $wpdb;
-	return $wpdb->prefix . 'wpdoctor_' . $name;
+	return $wpdb->prefix . 'sitecure_' . $name;
 }
 
-function wpdoctor_maybe_install_tables() {
+function sitecure_maybe_install_tables() {
 	global $wpdb;
-	$table_sites = wpdoctor_get_table( 'sites' );
+	$table_sites = sitecure_get_table( 'sites' );
 	if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_sites'" ) !== $table_sites ) {
-		wpdoctor_install_database_tables();
+		sitecure_install_database_tables();
+	} else {
+		// Ensure current site always reflects SiteCure
+		$wpdb->query( "UPDATE $table_sites SET name = 'SiteCure (Current Site)' WHERE access_mode = 'local'" );
 	}
 }
-add_action( 'admin_init', 'wpdoctor_maybe_install_tables' );
+add_action( 'admin_init', 'sitecure_maybe_install_tables' );
 
 /**
  * Install or upgrade custom tables
  */
-function wpdoctor_install_database_tables() {
+function sitecure_install_database_tables() {
 	global $wpdb;
 	$charset_collate = $wpdb->get_charset_collate();
 
-	require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	if ( ! function_exists( 'dbDelta' ) && file_exists( ABSPATH . 'wp-admin/includes/upgrade.php' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+	}
 
 	// 1. Sites Table
-	$table_sites = wpdoctor_get_table( 'sites' );
+	$table_sites = sitecure_get_table( 'sites' );
 	$sql_sites = "CREATE TABLE $table_sites (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		name varchar(191) NOT NULL,
@@ -54,12 +59,8 @@ function wpdoctor_install_database_tables() {
 	// Cleanup: Do NOT add or retain current host site in Managed Sites
 	$wpdb->query( "DELETE FROM $table_sites WHERE access_mode = 'local'" );
 
-	// Cleanup any false-positive findings previously stored for wp-doctor
-	$table_findings = wpdoctor_get_table( 'findings' );
-	$wpdb->query( "DELETE FROM $table_findings WHERE file_path LIKE '%wp-doctor%'" );
-
 	// 2. Connections Table (Encrypted Credentials)
-	$table_connections = wpdoctor_get_table( 'connections' );
+	$table_connections = sitecure_get_table( 'connections' );
 	$sql_connections = "CREATE TABLE $table_connections (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned NOT NULL,
@@ -77,7 +78,7 @@ function wpdoctor_install_database_tables() {
 	dbDelta( $sql_connections );
 
 	// 3. Scans Table
-	$table_scans = wpdoctor_get_table( 'scans' );
+	$table_scans = sitecure_get_table( 'scans' );
 	$sql_scans = "CREATE TABLE $table_scans (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned NOT NULL,
@@ -97,7 +98,7 @@ function wpdoctor_install_database_tables() {
 	dbDelta( $sql_scans );
 
 	// 4. Findings Table
-	$table_findings = wpdoctor_get_table( 'findings' );
+	$table_findings = sitecure_get_table( 'findings' );
 	$sql_findings = "CREATE TABLE $table_findings (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		scan_id bigint(20) unsigned NOT NULL,
@@ -121,7 +122,7 @@ function wpdoctor_install_database_tables() {
 	dbDelta( $sql_findings );
 
 	// 5. Quarantine Table
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
 	$sql_quarantine = "CREATE TABLE $table_quarantine (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		finding_id bigint(20) unsigned DEFAULT NULL,
@@ -141,7 +142,7 @@ function wpdoctor_install_database_tables() {
 	dbDelta( $sql_quarantine );
 
 	// 6. Audit Logs Table
-	$table_audit = wpdoctor_get_table( 'audit_logs' );
+	$table_audit = sitecure_get_table( 'audit_logs' );
 	$sql_audit = "CREATE TABLE $table_audit (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned DEFAULT 0,
@@ -164,13 +165,13 @@ function wpdoctor_install_database_tables() {
  * @param string $subdir Optional subdirectory ('cleaned_backups', 'vault', 'backups')
  * @return string Full filesystem path to the directory on the client site
  */
-function wpdoctor_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
+function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 	if ( ! empty( $site_id ) && (int) $site_id > 0 ) {
-		$site_root = wpdoctor_get_site_root( $site_id );
+		$site_root = sitecure_get_site_root( $site_id );
 	} else {
 		// If no site_id, check if local site is registered before touching host uploads
 		global $wpdb;
-		$table_sites = wpdoctor_get_table( 'sites' );
+		$table_sites = sitecure_get_table( 'sites' );
 		$has_local = $wpdb->get_var( "SELECT id FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
 		if ( $has_local ) {
 			$site_root = ABSPATH;
@@ -185,10 +186,6 @@ function wpdoctor_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 	}
 
 	$quarantine_dir = $site_root . '/wp-content/uploads/sitecure-quarantine';
-	// If legacy wp-doctor-quarantine exists and sitecure-quarantine doesn't yet, keep legacy or migrate
-	if ( ! is_dir( $quarantine_dir ) && is_dir( $site_root . '/wp-content/uploads/wp-doctor-quarantine' ) ) {
-		$quarantine_dir = $site_root . '/wp-content/uploads/wp-doctor-quarantine';
-	}
 
 	if ( ! is_dir( $quarantine_dir ) ) {
 		wp_mkdir_p( $quarantine_dir );
@@ -236,45 +233,26 @@ function wpdoctor_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 /**
  * Initialize isolated quarantine storage directory
  */
-function wpdoctor_init_quarantine_storage( $site_id = 0 ) {
-	return wpdoctor_get_site_quarantine_dir( $site_id );
+function sitecure_init_quarantine_storage( $site_id = 0 ) {
+	return sitecure_get_site_quarantine_dir( $site_id );
 }
 
 /**
- * Check if Developer Mode / Pro tier is active
+ * Check if Pro / Multi-site tier is active
+ * Verified strictly through server-side Cloudflare Worker verification
  *
  * @return bool
  */
-function wpdoctor_is_dev_mode() {
-	// 1. Check if defined in wp-config.php: define( 'SITECURE_DEV_MODE', true ); or legacy WPDOCTOR_DEV_MODE
-	if ( ( defined( 'SITECURE_DEV_MODE' ) && SITECURE_DEV_MODE ) || ( defined( 'WPDOCTOR_DEV_MODE' ) && WPDOCTOR_DEV_MODE ) ) {
-		return true;
-	}
-
-	// 2. Check saved license key (SiteCure or legacy WP Doctor)
+function sitecure_is_dev_mode() {
+	// Check saved license key and verified status from Cloudflare microservice
 	$license = get_option( 'sitecure_pro_license_key', '' );
-	if ( empty( $license ) ) {
-		$license = get_option( 'wpdoctor_pro_license_key', '' );
-	}
-
 	if ( ! empty( $license ) ) {
-		$norm = strtoupper( trim( $license ) );
-		if ( $norm === 'SITECURE-DEV-UNLIMITED' || $norm === 'WPDOCTOR-DEV-UNLIMITED' || hash( 'sha256', $license ) === '5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8' ) {
+		if ( get_transient( 'sitecure_pro_verified' ) ) {
 			return true;
 		}
 	}
 
-	// 3. Extensible via filters
-	$is_pro = apply_filters( 'sitecure_is_pro', false );
-	if ( $is_pro ) {
-		return true;
-	}
-
-	return (bool) apply_filters( 'wpdoctor_is_pro', false );
-}
-
-function sitecure_is_dev_mode() {
-	return wpdoctor_is_dev_mode();
+	return (bool) apply_filters( 'sitecure_is_pro', false );
 }
 
 /**
@@ -282,15 +260,11 @@ function sitecure_is_dev_mode() {
  *
  * @return int 1 for Free tier, 9999 for Developer / Pro
  */
-function wpdoctor_get_site_quota() {
-	if ( wpdoctor_is_dev_mode() ) {
+function sitecure_get_site_quota() {
+	if ( sitecure_is_dev_mode() ) {
 		return 9999;
 	}
 	return 1;
-}
-
-function sitecure_get_site_quota() {
-	return wpdoctor_get_site_quota();
 }
 
 /**
@@ -298,13 +272,9 @@ function sitecure_get_site_quota() {
  *
  * @return bool
  */
-function wpdoctor_can_add_site() {
-	$sites = wpdoctor_get_sites();
-	return count( $sites ) < wpdoctor_get_site_quota();
-}
-
 function sitecure_can_add_site() {
-	return wpdoctor_can_add_site();
+	$sites = sitecure_get_sites();
+	return count( $sites ) < sitecure_get_site_quota();
 }
 
 /**
@@ -312,9 +282,9 @@ function sitecure_can_add_site() {
  *
  * @return int|WP_Error Site ID or error
  */
-function wpdoctor_register_local_site() {
+function sitecure_register_local_site() {
 	global $wpdb;
-	$table = wpdoctor_get_table( 'sites' );
+	$table = sitecure_get_table( 'sites' );
 
 	// Check if already registered
 	$existing = $wpdb->get_row( "SELECT * FROM $table WHERE access_mode = 'local' LIMIT 1" );
@@ -322,7 +292,7 @@ function wpdoctor_register_local_site() {
 		return (int) $existing->id;
 	}
 
-	if ( ! wpdoctor_can_add_site() ) {
+	if ( ! sitecure_can_add_site() ) {
 		return new WP_Error( 'quota_reached', 'Free plan limit reached (1 site). Upgrade to Pro to manage multiple websites.' );
 	}
 
@@ -334,15 +304,12 @@ function wpdoctor_register_local_site() {
 		}
 	}
 
-	$name = get_bloginfo( 'name' );
-	if ( empty( $name ) ) {
-		$name = 'This Website (Local)';
-	}
+	$name = 'SiteCure';
 
 	$wpdb->insert(
 		$table,
 		array(
-			'name'          => $name . ' (Current Site)',
+			'name'          => 'SiteCure (Current Site)',
 			'url'           => home_url(),
 			'environment'   => 'production',
 			'access_mode'   => 'local',
@@ -353,13 +320,9 @@ function wpdoctor_register_local_site() {
 	);
 
 	$site_id = (int) $wpdb->insert_id;
-	wpdoctor_log_audit( $site_id, 'register_site', 'local', "Registered hosted site '{$name}' as Site #{$site_id}" );
+	sitecure_log_audit( $site_id, 'register_site', 'local', "Registered hosted site '{$name}' as Site #{$site_id}" );
 
 	return $site_id;
-}
-
-function sitecure_register_local_site() {
-	return wpdoctor_register_local_site();
 }
 
 /**
@@ -368,18 +331,18 @@ function sitecure_register_local_site() {
  * @param int $site_id
  * @return bool
  */
-function wpdoctor_delete_site( $site_id ) {
+function sitecure_delete_site( $site_id ) {
 	global $wpdb;
 	$site_id = (int) $site_id;
 	if ( $site_id <= 0 ) {
 		return false;
 	}
 
-	$table_sites      = wpdoctor_get_table( 'sites' );
-	$table_scans      = wpdoctor_get_table( 'scans' );
-	$table_findings   = wpdoctor_get_table( 'findings' );
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
-	$table_audit      = wpdoctor_get_table( 'audit_logs' );
+	$table_sites      = sitecure_get_table( 'sites' );
+	$table_scans      = sitecure_get_table( 'scans' );
+	$table_findings   = sitecure_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
+	$table_audit      = sitecure_get_table( 'audit_logs' );
 
 	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	if ( ! $site ) {
@@ -401,16 +364,12 @@ function wpdoctor_delete_site( $site_id ) {
 	return true;
 }
 
-function sitecure_delete_site( $site_id ) {
-	return wpdoctor_delete_site( $site_id );
-}
-
 /**
  * Log an audit event
  */
-function wpdoctor_log_audit( $site_id, $action, $target, $details ) {
+function sitecure_log_audit( $site_id, $action, $target, $details ) {
 	global $wpdb;
-	$table_audit = wpdoctor_get_table( 'audit_logs' );
+	$table_audit = sitecure_get_table( 'audit_logs' );
 	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 	$wpdb->insert(
@@ -430,18 +389,26 @@ function wpdoctor_log_audit( $site_id, $action, $target, $details ) {
 /**
  * Get managed sites
  */
-function wpdoctor_get_sites() {
+function sitecure_get_sites() {
 	global $wpdb;
-	$table = wpdoctor_get_table( 'sites' );
-	return $wpdb->get_results( "SELECT * FROM $table ORDER BY id ASC" );
+	$table = sitecure_get_table( 'sites' );
+	$results = $wpdb->get_results( "SELECT * FROM $table ORDER BY id ASC" );
+	if ( ! empty( $results ) ) {
+		foreach ( $results as &$s ) {
+			if ( isset( $s->access_mode ) && $s->access_mode === 'local' ) {
+				$s->name = 'SiteCure (Current Site)';
+			}
+		}
+	}
+	return $results;
 }
 
 /**
  * Resolve filesystem root directory for any site
  */
-function wpdoctor_get_site_root( $site_id ) {
+function sitecure_get_site_root( $site_id ) {
 	global $wpdb;
-	$table_sites = wpdoctor_get_table( 'sites' );
+	$table_sites = sitecure_get_table( 'sites' );
 	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	$site_root = ABSPATH;
 
@@ -466,13 +433,13 @@ function wpdoctor_get_site_root( $site_id ) {
 /**
  * Get dashboard overview statistics
  */
-function wpdoctor_get_dashboard_stats() {
+function sitecure_get_dashboard_stats() {
 	global $wpdb;
 
-	$table_sites = wpdoctor_get_table( 'sites' );
-	$table_scans = wpdoctor_get_table( 'scans' );
-	$table_findings = wpdoctor_get_table( 'findings' );
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
+	$table_sites = sitecure_get_table( 'sites' );
+	$table_scans = sitecure_get_table( 'scans' );
+	$table_findings = sitecure_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
 
 	$total_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites" );
 	$healthy_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites WHERE health_status = 'healthy'" );

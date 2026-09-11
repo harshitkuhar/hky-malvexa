@@ -1,6 +1,6 @@
 <?php
 /**
- * WP Doctor Procedural Safe Quarantine & Rollback System
+ * SiteCure Procedural Safe Quarantine & Rollback System
  * Implements Golden Recovery Rule: Isolates files in protected storage with 1-click restore
  */
 if ( ! defined( 'ABSPATH' ) ) {
@@ -10,11 +10,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Quarantine an infected file safely
  */
-function wpdoctor_quarantine_file( $finding_id ) {
+function sitecure_quarantine_file( $finding_id ) {
 	global $wpdb;
 
-	$table_findings = wpdoctor_get_table( 'findings' );
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
+	$table_findings = sitecure_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
 
 	$finding = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_findings WHERE id = %d", $finding_id ) );
 	if ( ! $finding ) {
@@ -23,8 +23,8 @@ function wpdoctor_quarantine_file( $finding_id ) {
 
 	$rel_path = $finding->file_path;
 
-	// Critical Guard: NEVER allow quarantining SiteCure / WP Doctor's own files or essential WP config
-	$protected_patterns = array( 'sitecure', 'wp-doctor', 'wp-config.php', 'wp-load.php', 'wp-settings.php' );
+	// Critical Guard: NEVER allow quarantining SiteCure's own files or essential WP config
+	$protected_patterns = array( 'sitecure', 'wp-config.php', 'wp-load.php', 'wp-settings.php' );
 	foreach ( $protected_patterns as $pattern ) {
 		if ( stripos( $rel_path, $pattern ) !== false ) {
 			return new WP_Error( 'protected_file', 'Protection Guard: Cannot quarantine system files or SiteCure plugin files.' );
@@ -33,8 +33,8 @@ function wpdoctor_quarantine_file( $finding_id ) {
 
 	// 1. Support quarantining database threats (posts, options, snippets)
 	if ( strpos( $rel_path, 'database:' ) === 0 || $finding->category === 'wpcode_snippet' || $finding->category === 'db_option_injection' ) {
-		$target_db = wpdoctor_get_target_db( $finding->site_id );
-		$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
+		$target_db = sitecure_get_target_db( $finding->site_id );
+		$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
 		$timestamp = time();
 
 		$db_payload = null;
@@ -124,7 +124,7 @@ function wpdoctor_quarantine_file( $finding_id ) {
 		$quarantine_id = $wpdb->insert_id;
 
 		$wpdb->update( $table_findings, array( 'status' => 'quarantined' ), array( 'id' => $finding_id ) );
-		wpdoctor_log_audit( $finding->site_id, 'quarantine_db', $rel_path, "Quarantined database threat to client vault: {$quarantine_filename}" );
+		sitecure_log_audit( $finding->site_id, 'quarantine_db', $rel_path, "Quarantined database threat to client vault: {$quarantine_filename}" );
 
 		return array(
 			'success'       => true,
@@ -133,13 +133,13 @@ function wpdoctor_quarantine_file( $finding_id ) {
 		);
 	}
 
-	$full_path = wpdoctor_get_site_root( $finding->site_id ) . '/' . ltrim( $rel_path, '/\\' );
+	$full_path = sitecure_get_site_root( $finding->site_id ) . '/' . ltrim( $rel_path, '/\\' );
 
 	if ( ! file_exists( $full_path ) ) {
 		return new WP_Error( 'file_not_found', 'Target file does not exist on disk.' );
 	}
 
-	$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
+	$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
 
 	$file_hash = hash_file( 'sha256', $full_path );
 	$file_perms = substr( sprintf( '%o', fileperms( $full_path ) ), -4 );
@@ -181,7 +181,7 @@ function wpdoctor_quarantine_file( $finding_id ) {
 	);
 
 	// 5. Add audit log
-	wpdoctor_log_audit( $finding->site_id, 'quarantine_file', $rel_path, "Quarantined file to: {$quarantine_filename}. Hash: {$file_hash}" );
+	sitecure_log_audit( $finding->site_id, 'quarantine_file', $rel_path, "Quarantined file to: {$quarantine_filename}. Hash: {$file_hash}" );
 
 	return array(
 		'success'       => true,
@@ -193,25 +193,43 @@ function wpdoctor_quarantine_file( $finding_id ) {
 /**
  * Restore a quarantined file back to original location
  */
-function wpdoctor_restore_file( $quarantine_id ) {
+function sitecure_restore_file( $quarantine_id ) {
 	global $wpdb;
 
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
-	$table_findings = wpdoctor_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
+	$table_findings = sitecure_get_table( 'findings' );
 
 	$item = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_quarantine WHERE id = %d", $quarantine_id ) );
 	if ( ! $item || ! in_array( $item->status, array( 'quarantined', 'cleaned' ), true ) ) {
 		return new WP_Error( 'not_found', 'Quarantine record not found or already restored.' );
 	}
 
-	if ( ! file_exists( $item->quarantine_path ) ) {
-		return new WP_Error( 'missing_vault', 'Quarantined backup file is missing from vault.' );
+	$quarantine_path = $item->quarantine_path;
+	if ( ! file_exists( $quarantine_path ) ) {
+		$fname = basename( $quarantine_path );
+		$site_root = function_exists( 'sitecure_get_site_root' ) ? sitecure_get_site_root( $item->site_id ) : ABSPATH;
+		$candidate_paths = array(
+			sitecure_get_site_quarantine_dir( $item->site_id, 'vault' ) . '/' . $fname,
+			sitecure_get_site_quarantine_dir( $item->site_id, 'cleaned_backups' ) . '/' . $fname,
+			$site_root . '/wp-content/uploads/sitecure-quarantine/vault/' . $fname,
+			$site_root . '/wp-content/uploads/sitecure-quarantine/cleaned_backups/' . $fname,
+		);
+		foreach ( $candidate_paths as $cand ) {
+			if ( file_exists( $cand ) ) {
+				$quarantine_path = $cand;
+				break;
+			}
+		}
+	}
+
+	if ( ! file_exists( $quarantine_path ) ) {
+		return new WP_Error( 'missing_vault', 'Quarantined backup file is missing from vault (' . esc_html( basename( $item->quarantine_path ) ) . ').' );
 	}
 
 	// Support restoring database records
 	if ( $item->original_permissions === 'DB_RECORD' || strpos( $item->original_path, 'database:' ) === 0 ) {
-		$target_db = wpdoctor_get_target_db( $item->site_id );
-		$json = @file_get_contents( $item->quarantine_path );
+		$target_db = sitecure_get_target_db( $item->site_id );
+		$json = @file_get_contents( $quarantine_path );
 		$payload = ! empty( $json ) ? json_decode( $json, true ) : null;
 
 		if ( $payload && is_array( $payload ) ) {
@@ -263,7 +281,7 @@ function wpdoctor_restore_file( $quarantine_id ) {
 		if ( $fid ) {
 			$wpdb->update( $table_findings, array( 'status' => 'new' ), array( 'id' => $fid ) );
 		}
-		wpdoctor_log_audit( $item->site_id, 'restore_db', $item->original_path, "Restored database record from quarantine vault back to active state." );
+		sitecure_log_audit( $item->site_id, 'restore_db', $item->original_path, "Restored database record from quarantine vault back to active state." );
 
 		return array(
 			'success'       => true,
@@ -271,13 +289,13 @@ function wpdoctor_restore_file( $quarantine_id ) {
 		);
 	}
 
-	$dest = wpdoctor_get_site_root( $item->site_id ) . '/' . ltrim( $item->original_path, '/\\' );
+	$dest = sitecure_get_site_root( $item->site_id ) . '/' . ltrim( $item->original_path, '/\\' );
 	$dest_dir = dirname( $dest );
 	if ( ! is_dir( $dest_dir ) ) {
 		wp_mkdir_p( $dest_dir );
 	}
 
-	if ( ! @copy( $item->quarantine_path, $dest ) ) {
+	if ( ! @copy( $quarantine_path, $dest ) ) {
 		return new WP_Error( 'restore_failed', 'Failed to copy file back to original location.' );
 	}
 
@@ -305,7 +323,7 @@ function wpdoctor_restore_file( $quarantine_id ) {
 	}
 
 	// Audit log
-	wpdoctor_log_audit( $item->site_id, 'restore_quarantine', $item->original_path, "Restored file from quarantine back to active state. Hash: {$item->original_hash}" );
+	sitecure_log_audit( $item->site_id, 'restore_quarantine', $item->original_path, "Restored file from quarantine back to active state. Hash: {$item->original_hash}" );
 
 	return array(
 		'success'       => true,
@@ -317,11 +335,11 @@ function wpdoctor_restore_file( $quarantine_id ) {
  * Clean / Neutralize injected malicious code from a legitimate file
  * Creates a safety backup, comments out the malicious code line, and validates syntax
  */
-function wpdoctor_clean_file_injection( $finding_id ) {
+function sitecure_clean_file_injection( $finding_id ) {
 	global $wpdb;
 
-	$table_findings   = wpdoctor_get_table( 'findings' );
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
+	$table_findings   = sitecure_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
 
 	$finding = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_findings WHERE id = %d", $finding_id ) );
 	if ( ! $finding ) {
@@ -330,14 +348,14 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 
 	$rel_path = $finding->file_path;
 
-	// Never modify SiteCure or WP Doctor's own files
-	if ( stripos( $rel_path, 'sitecure' ) !== false || stripos( $rel_path, 'wp-doctor' ) !== false ) {
+	// Never modify SiteCure's own files
+	if ( stripos( $rel_path, 'sitecure' ) !== false ) {
 		return new WP_Error( 'protected_file', 'Protection Guard: Cannot modify SiteCure plugin files.' );
 	}
 
 	// 1. Support neutralizing database threats (WPCode posts, WPCode options, dedicated tables, and SEO Spam)
 	if ( strpos( $rel_path, 'database:' ) === 0 || $finding->category === 'wpcode_snippet' || $finding->category === 'db_option_injection' || $finding->category === 'seo_spam_injection' ) {
-		$target_db = wpdoctor_get_target_db( $finding->site_id );
+		$target_db = sitecure_get_target_db( $finding->site_id );
 
 		// A. Blackhat SEO / Casino Spam Injected Posts, Elementor Pages & Options (Surgical Cleaning)
 		if ( $finding->category === 'seo_spam_injection' ) {
@@ -348,7 +366,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 				$opt = $target_db->get_row( $target_db->prepare( "SELECT * FROM `{$target_db->options}` WHERE option_id = %d", $option_id ), ARRAY_A );
 				if ( $opt ) {
 					// 1. Create client safety backup in Quarantine Vault
-					$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
+					$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
 					$timestamp = time();
 					$db_payload = array(
 						'type'   => 'option',
@@ -379,14 +397,14 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					);
 
 					// 3. Clean
-					$cleaned_val = wpdoctor_clean_seo_spam_content( $opt['option_value'] );
+					$cleaned_val = sitecure_clean_seo_spam_content( $opt['option_value'] );
 					$target_db->update(
 						$target_db->options,
 						array( 'option_value' => $cleaned_val ),
 						array( 'option_id' => $option_id )
 					);
 					$wpdb->update( $table_findings, array( 'status' => 'cleaned' ), array( 'id' => $finding_id ) );
-					wpdoctor_log_audit( $finding->site_id, 'clean_seo_spam', $rel_path, "Surgically removed SEO spam from option #{$option_id}. Vault Backup: {$quarantine_filename}" );
+					sitecure_log_audit( $finding->site_id, 'clean_seo_spam', $rel_path, "Surgically removed SEO spam from option #{$option_id}. Vault Backup: {$quarantine_filename}" );
 					return array(
 						'success'     => true,
 						'file_path'   => $rel_path,
@@ -401,8 +419,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 				$post = $target_db->get_row( $target_db->prepare( "SELECT * FROM `{$target_db->posts}` WHERE ID = %d", $post_id ), ARRAY_A );
 				if ( $post ) {
 					// 1. Create client safety backup in Quarantine Vault & Cleaned backups
-					$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
-					$backup_dir     = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
+					$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
+					$backup_dir     = sitecure_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
 					$timestamp      = time();
 
 					$postmeta = $target_db->get_results( $target_db->prepare( "SELECT * FROM `{$target_db->postmeta}` WHERE post_id = %d", $post_id ), ARRAY_A );
@@ -448,11 +466,11 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					}
 					$backup_filename = 'seo_spam_post_' . $post_id . '.' . $timestamp . '.pre_clean.bak';
 					$backup_path = $backup_dir . '/' . $backup_filename;
-					$backup_content = "<?php\n/**\n * WP Doctor SEO Spam Clean Backup\n * Site ID: {$finding->site_id}\n * Post ID: {$post['ID']}\n * Post Title: {$post['post_title']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n// RAW POST CONTENT:\n" . $post['post_content'] . "\n\n// ELEMENTOR DATA:\n" . ( $orig_meta ? $orig_meta : 'N/A' );
+					$backup_content = "<?php\n/**\n * SiteCure SEO Spam Clean Backup\n * Site ID: {$finding->site_id}\n * Post ID: {$post['ID']}\n * Post Title: {$post['post_title']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n// RAW POST CONTENT:\n" . $post['post_content'] . "\n\n// ELEMENTOR DATA:\n" . ( $orig_meta ? $orig_meta : 'N/A' );
 					@file_put_contents( $backup_path, $backup_content );
 
 					// 2. Clean in post_content
-					$cleaned_content = wpdoctor_clean_seo_spam_content( $post['post_content'] );
+					$cleaned_content = sitecure_clean_seo_spam_content( $post['post_content'] );
 					if ( $cleaned_content !== $post['post_content'] ) {
 						$target_db->update(
 							$target_db->posts,
@@ -465,7 +483,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					if ( ! empty( $orig_meta ) ) {
 						$decoded = json_decode( $orig_meta, true );
 						if ( is_array( $decoded ) ) {
-							wpdoctor_clean_elementor_tree( $decoded, $strip_pattern );
+							sitecure_clean_elementor_tree( $decoded, $strip_pattern );
 							$new_json = wp_json_encode( $decoded );
 							$target_db->update(
 								$target_db->postmeta,
@@ -473,7 +491,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 								array( 'post_id' => $post_id, 'meta_key' => '_elementor_data' )
 							);
 						} else {
-							$cleaned_meta = wpdoctor_clean_seo_spam_content( $orig_meta );
+							$cleaned_meta = sitecure_clean_seo_spam_content( $orig_meta );
 							if ( $cleaned_meta !== $orig_meta ) {
 								$target_db->update(
 									$target_db->postmeta,
@@ -491,7 +509,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 						$parent_id = (int) $post['post_parent'];
 						$parent_post = $target_db->get_row( $target_db->prepare( "SELECT * FROM `{$target_db->posts}` WHERE ID = %d", $parent_id ), ARRAY_A );
 						if ( $parent_post ) {
-							$cleaned_parent = wpdoctor_clean_seo_spam_content( $parent_post['post_content'] );
+							$cleaned_parent = sitecure_clean_seo_spam_content( $parent_post['post_content'] );
 							if ( $cleaned_parent !== $parent_post['post_content'] ) {
 								$target_db->update( $target_db->posts, array( 'post_content' => $cleaned_parent ), array( 'ID' => $parent_id ) );
 							}
@@ -504,7 +522,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 						foreach ( $revisions as $rev_id ) {
 							$rev_content = $target_db->get_var( $target_db->prepare( "SELECT post_content FROM `{$target_db->posts}` WHERE ID = %d", $rev_id ) );
 							if ( $rev_content ) {
-								$cleaned_rev = wpdoctor_clean_seo_spam_content( $rev_content );
+								$cleaned_rev = sitecure_clean_seo_spam_content( $rev_content );
 								if ( $cleaned_rev !== $rev_content ) {
 									$target_db->update( $target_db->posts, array( 'post_content' => $cleaned_rev ), array( 'ID' => $rev_id ) );
 								}
@@ -519,8 +537,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 						array( 'id' => $finding_id )
 					);
 
-					$client_backup_rel = 'wp-content/uploads/wp-doctor-quarantine/vault/' . $quarantine_filename;
-					wpdoctor_log_audit(
+					$client_backup_rel = 'wp-content/uploads/sitecure-quarantine/vault/' . $quarantine_filename;
+					sitecure_log_audit(
 						$finding->site_id,
 						'clean_seo_spam',
 						$rel_path,
@@ -544,8 +562,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 				$post = $target_db->get_row( $target_db->prepare( "SELECT * FROM `{$target_db->posts}` WHERE ID = %d", $post_id ), ARRAY_A );
 				if ( $post ) {
 					// 1. Create client safety backup in Quarantine Vault
-					$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
-					$backup_dir     = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
+					$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
+					$backup_dir     = sitecure_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
 					$timestamp      = time();
 
 					$postmeta = $target_db->get_results( $target_db->prepare( "SELECT * FROM `{$target_db->postmeta}` WHERE post_id = %d", $post_id ), ARRAY_A );
@@ -582,11 +600,11 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					// Also write text .bak in cleaned_backups for human inspection
 					$backup_filename = 'wp_post_snippet_' . $post_id . '.' . $timestamp . '.pre_clean.bak';
 					$backup_path = $backup_dir . '/' . $backup_filename;
-					$backup_content = "<?php\n/**\n * WP Doctor Post/Snippet Backup\n * Site ID: {$finding->site_id}\n * Post ID: {$post['ID']}\n * Post Title: {$post['post_title']}\n * Post Status: {$post['post_status']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . $post['post_content'];
+					$backup_content = "<?php\n/**\n * SiteCure Post/Snippet Backup\n * Site ID: {$finding->site_id}\n * Post ID: {$post['ID']}\n * Post Title: {$post['post_title']}\n * Post Status: {$post['post_status']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . $post['post_content'];
 					@file_put_contents( $backup_path, $backup_content );
 
 					// 2. Neutralize post_content and set status to draft
-					$neutralized = "/* [WP DOCTOR NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */\n/*\n" . str_replace( '*/', '* /', $post['post_content'] ) . "\n*/";
+					$neutralized = "/* [SITECURE NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */\n/*\n" . str_replace( '*/', '* /', $post['post_content'] ) . "\n*/";
 					$target_db->update(
 						$target_db->posts,
 						array(
@@ -599,7 +617,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					// Also neutralize in postmeta if present
 					$target_db->query(
 						$target_db->prepare(
-							"UPDATE `{$target_db->postmeta}` SET meta_value = %s WHERE post_id = %d AND (meta_key LIKE '%%snippet%%' OR meta_key LIKE '%%wpcode%%')",
+							"UPDATE `{$target_db->postmeta}` SET meta_value = %s WHERE post_id = %d AND meta_key IN ('_elementor_data', 'syntax_highlighting')",
 							$neutralized,
 							$post_id
 						)
@@ -614,8 +632,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 						array( 'id' => $finding_id )
 					);
 
-					$client_backup_rel = 'wp-content/uploads/wp-doctor-quarantine/vault/' . $quarantine_filename;
-					wpdoctor_log_audit(
+					$client_backup_rel = 'wp-content/uploads/sitecure-quarantine/vault/' . $quarantine_filename;
+					sitecure_log_audit(
 						$finding->site_id,
 						'clean_code',
 						$rel_path,
@@ -645,8 +663,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 
 			if ( $opt ) {
 				// 1. Create client safety backup in Quarantine Vault
-				$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
-				$backup_dir     = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
+				$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
+				$backup_dir     = sitecure_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
 				$timestamp      = time();
 
 				$db_payload = array(
@@ -680,7 +698,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 				// Also write text .bak
 				$backup_filename = 'wp_option_' . sanitize_file_name( $opt['option_name'] ) . '.' . $timestamp . '.pre_clean.bak';
 				$backup_path = $backup_dir . '/' . $backup_filename;
-				$backup_content = "<?php\n/**\n * WP Doctor Option Backup\n * Site ID: {$finding->site_id}\n * Option ID: {$opt['option_id']}\n * Option Name: {$opt['option_name']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . $opt['option_value'];
+				$backup_content = "<?php\n/**\n * SiteCure Option Backup\n * Site ID: {$finding->site_id}\n * Option ID: {$opt['option_id']}\n * Option Name: {$opt['option_name']}\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . $opt['option_value'];
 				@file_put_contents( $backup_path, $backup_content );
 
 				// 2. Neutralize option value
@@ -688,7 +706,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					// Delete WPCode cache so WPCode will re-compile clean snippets from post drafts
 					$target_db->query( $target_db->prepare( "DELETE FROM `{$target_db->options}` WHERE option_id = %d", $opt['option_id'] ) );
 				} else {
-					$neutralized = "/* [WP DOCTOR NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */";
+					$neutralized = "/* [SITECURE NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */";
 					$target_db->update(
 						$target_db->options,
 						array( 'option_value' => $neutralized ),
@@ -702,8 +720,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					array( 'id' => $finding_id )
 				);
 
-				$client_backup_rel = 'wp-content/uploads/wp-doctor-quarantine/vault/' . $quarantine_filename;
-				wpdoctor_log_audit(
+				$client_backup_rel = 'wp-content/uploads/sitecure-quarantine/vault/' . $quarantine_filename;
+				sitecure_log_audit(
 					$finding->site_id,
 					'clean_code',
 					$rel_path,
@@ -726,8 +744,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 			$snippet_id = (int) $finding->line_number;
 			$sp = $target_db->get_row( $target_db->prepare( "SELECT * FROM `{$snippets_table}` WHERE id = %d", $snippet_id ), ARRAY_A );
 			if ( $sp ) {
-				$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
-				$backup_dir     = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
+				$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
+				$backup_dir     = sitecure_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
 				$timestamp      = time();
 
 				$db_payload = array(
@@ -760,10 +778,10 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 
 				$backup_filename = 'wpcode_snippet_' . $snippet_id . '.' . $timestamp . '.pre_clean.bak';
 				$backup_path = $backup_dir . '/' . $backup_filename;
-				$snippet_backup_content = "<?php\n/**\n * WP Doctor WPCode Snippet Backup\n * Site ID: {$finding->site_id}\n * Snippet Title: " . ( isset( $sp['title'] ) ? $sp['title'] : '' ) . "\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . ( isset( $sp['code'] ) ? $sp['code'] : '' );
+				$snippet_backup_content = "<?php\n/**\n * SiteCure WPCode Snippet Backup\n * Site ID: {$finding->site_id}\n * Snippet Title: " . ( isset( $sp['title'] ) ? $sp['title'] : '' ) . "\n * Date: " . gmdate( 'Y-m-d H:i:s' ) . "\n */\n" . ( isset( $sp['code'] ) ? $sp['code'] : '' );
 				@file_put_contents( $backup_path, $snippet_backup_content );
 
-				$neutralized = "/* [WP DOCTOR NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */\n/*\n" . str_replace( '*/', '* /', isset( $sp['code'] ) ? $sp['code'] : '' ) . "\n*/";
+				$neutralized = "/* [SITECURE NEUTRALIZED MALWARE - " . gmdate( 'Y-m-d H:i:s' ) . "] */\n/*\n" . str_replace( '*/', '* /', isset( $sp['code'] ) ? $sp['code'] : '' ) . "\n*/";
 				$target_db->update(
 					$snippets_table,
 					array(
@@ -782,8 +800,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 					array( 'id' => $finding_id )
 				);
 
-				$client_backup_rel = 'wp-content/uploads/wp-doctor-quarantine/vault/' . $quarantine_filename;
-				wpdoctor_log_audit(
+				$client_backup_rel = 'wp-content/uploads/sitecure-quarantine/vault/' . $quarantine_filename;
+				sitecure_log_audit(
 					$finding->site_id,
 					'clean_code',
 					$rel_path,
@@ -806,7 +824,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 				array( 'status' => 'cleaned' ),
 				array( 'id' => $finding_id )
 			);
-			wpdoctor_log_audit(
+			sitecure_log_audit(
 				$finding->site_id,
 				'clean_code',
 				$rel_path,
@@ -821,14 +839,14 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 		}
 	}
 
-	$full_path = wpdoctor_get_site_root( $finding->site_id ) . '/' . ltrim( $rel_path, '/\\' );
+	$full_path = sitecure_get_site_root( $finding->site_id ) . '/' . ltrim( $rel_path, '/\\' );
 	if ( ! file_exists( $full_path ) ) {
 		return new WP_Error( 'file_not_found', 'Target file does not exist on disk.' );
 	}
 
 	// 2. Create safety backup of original file in Quarantine Vault & Cleaned backups
-	$quarantine_dir = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'vault' );
-	$backup_dir     = wpdoctor_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
+	$quarantine_dir = sitecure_get_site_quarantine_dir( $finding->site_id, 'vault' );
+	$backup_dir     = sitecure_get_site_quarantine_dir( $finding->site_id, 'cleaned_backups' );
 	$timestamp      = time();
 
 	$file_hash  = hash_file( 'sha256', $full_path );
@@ -868,7 +886,7 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 	} else {
 		// Search for suspicious pattern
 		foreach ( $lines as $idx => $line ) {
-			if ( preg_match( '/(?:eval\s*\(|base64_decode\s*\(|gzinflate\s*\(|FilesMan|b374k|c99shell|call_user_func|WPDOCTOR_SAFE_TEST|WP DOCTOR NEUTRALIZED MALWARE)/i', $line ) ) {
+			if ( preg_match( '/(?:eval\s*\(|base64_decode\s*\(|gzinflate\s*\(|FilesMan|b374k|c99shell|call_user_func|SITECURE_SAFE_TEST|SITECURE NEUTRALIZED MALWARE)/i', $line ) ) {
 				if ( preg_match( '/^\s*<\?php\s*(.*)$/is', $line, $m ) ) {
 					$lines[ $idx ] = '<?php';
 				} else {
@@ -881,15 +899,15 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 		}
 	}
 
-	// Also purge any previous leftover WP DOCTOR comment tags across the file
+	// Also purge any previous leftover SiteCure comment tags across the file
 	foreach ( $lines as $k => $l ) {
-		if ( strpos( $l, 'WP DOCTOR NEUTRALIZED MALWARE' ) !== false ) {
+		if ( strpos( $l, 'SITECURE NEUTRALIZED MALWARE' ) !== false ) {
 			if ( preg_match( '/^\s*<\?php/i', $l ) ) {
 				$lines[ $k ] = '<?php';
-			} elseif ( preg_match( '/^\s*\/\*\s*\[WP DOCTOR NEUTRALIZED MALWARE.*?(\*\/|\Z)\s*$/is', $l ) ) {
+			} elseif ( preg_match( '/^\s*\/\*\s*\[SITECURE NEUTRALIZED MALWARE.*?(\*\/|\Z)\s*$/is', $l ) ) {
 				unset( $lines[ $k ] );
 			} else {
-				$cleaned_l = trim( preg_replace( '/\/\*\s*\[WP DOCTOR NEUTRALIZED MALWARE.*?(\*\/|\Z)/is', '', $l ) );
+				$cleaned_l = trim( preg_replace( '/\/\*\s*\[SITECURE NEUTRALIZED MALWARE.*?(\*\/|\Z)/is', '', $l ) );
 				if ( empty( $cleaned_l ) ) {
 					unset( $lines[ $k ] );
 				} else {
@@ -951,8 +969,8 @@ function wpdoctor_clean_file_injection( $finding_id ) {
 	);
 
 	// 8. Log audit
-	$client_backup_rel = 'wp-content/uploads/wp-doctor-quarantine/vault/' . $quarantine_filename;
-	wpdoctor_log_audit( $finding->site_id, 'clean_code', $rel_path, "Safely removed injected malware code at line {$target_line}. Vault Backup: {$client_backup_rel}" );
+	$client_backup_rel = 'wp-content/uploads/sitecure-quarantine/vault/' . $quarantine_filename;
+	sitecure_log_audit( $finding->site_id, 'clean_code', $rel_path, "Safely removed injected malware code at line {$target_line}. Vault Backup: {$client_backup_rel}" );
 
 	return array(
 		'success'     => true,
@@ -966,11 +984,11 @@ function wpdoctor_clean_file_injection( $finding_id ) {
  * Automatically sync any cleaned findings to the quarantine vault table if missing
  * Ensures previously and newly cleaned items always appear in the Quarantine Vault
  */
-function wpdoctor_sync_cleaned_findings_to_vault() {
+function sitecure_sync_cleaned_findings_to_vault() {
 	global $wpdb;
 
-	$table_findings   = wpdoctor_get_table( 'findings' );
-	$table_quarantine = wpdoctor_get_table( 'quarantine' );
+	$table_findings   = sitecure_get_table( 'findings' );
+	$table_quarantine = sitecure_get_table( 'quarantine' );
 
 	$missing_cleaned = $wpdb->get_results(
 		"SELECT f.* FROM $table_findings f 
@@ -983,8 +1001,8 @@ function wpdoctor_sync_cleaned_findings_to_vault() {
 	}
 
 	foreach ( $missing_cleaned as $f ) {
-		$quarantine_dir = wpdoctor_get_site_quarantine_dir( $f->site_id, 'vault' );
-		$backup_dir     = wpdoctor_get_site_quarantine_dir( $f->site_id, 'cleaned_backups' );
+		$quarantine_dir = sitecure_get_site_quarantine_dir( $f->site_id, 'vault' );
+		$backup_dir     = sitecure_get_site_quarantine_dir( $f->site_id, 'cleaned_backups' );
 		$timestamp      = time();
 
 		$quarantine_dest = '';
@@ -1020,7 +1038,7 @@ function wpdoctor_sync_cleaned_findings_to_vault() {
 				@copy( $found_bak, $quarantine_dest );
 				$hash = hash_file( 'sha256', $quarantine_dest );
 			} else {
-				$full_path = wpdoctor_get_site_root( $f->site_id ) . '/' . ltrim( $f->file_path, '/\\' );
+				$full_path = sitecure_get_site_root( $f->site_id ) . '/' . ltrim( $f->file_path, '/\\' );
 				if ( file_exists( $full_path ) ) {
 					$quarantine_filename = sanitize_file_name( basename( $f->file_path ) ) . '.' . $timestamp . '.quarantined';
 					$quarantine_dest = $quarantine_dir . '/' . $quarantine_filename;
@@ -1057,7 +1075,7 @@ function wpdoctor_sync_cleaned_findings_to_vault() {
  * @param string $content
  * @return string
  */
-function wpdoctor_clean_seo_spam_content( $content ) {
+function sitecure_clean_seo_spam_content( $content ) {
 	if ( empty( $content ) || ! is_string( $content ) ) {
 		return $content;
 	}
@@ -1094,7 +1112,7 @@ function wpdoctor_clean_seo_spam_content( $content ) {
  * @param array &$elements
  * @param string $pattern
  */
-function wpdoctor_clean_elementor_tree( &$elements, $pattern ) {
+function sitecure_clean_elementor_tree( &$elements, $pattern ) {
 	if ( ! is_array( $elements ) ) {
 		return;
 	}
@@ -1112,7 +1130,7 @@ function wpdoctor_clean_elementor_tree( &$elements, $pattern ) {
 			// Check text/editor widget
 			if ( isset( $item['settings']['editor'] ) ) {
 				if ( preg_match( $pattern, $item['settings']['editor'] ) || preg_match( '/(?:' . $casino_domains_kw . ')/i', $item['settings']['editor'] ) ) {
-					$item['settings']['editor'] = wpdoctor_clean_seo_spam_content( $item['settings']['editor'] );
+					$item['settings']['editor'] = sitecure_clean_seo_spam_content( $item['settings']['editor'] );
 					if ( empty( trim( strip_tags( $item['settings']['editor'] ) ) ) ) {
 						unset( $elements[ $k ] );
 						continue;
@@ -1121,10 +1139,9 @@ function wpdoctor_clean_elementor_tree( &$elements, $pattern ) {
 			}
 		}
 		if ( ! empty( $item['elements'] ) && is_array( $item['elements'] ) ) {
-			wpdoctor_clean_elementor_tree( $item['elements'], $pattern );
+			sitecure_clean_elementor_tree( $item['elements'], $pattern );
 			$item['elements'] = array_values( $item['elements'] );
 		}
 	}
 	$elements = array_values( $elements );
 }
-
