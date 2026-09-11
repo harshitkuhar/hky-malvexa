@@ -42,8 +42,8 @@ function sitecure_get_cloud_endpoint() {
 		return rtrim( $saved, '/' );
 	}
 
-	// Default production microservice endpoint
-	return 'https://verify.sitecure.io';
+	// Default live Cloudflare Worker microservice endpoint
+	return 'https://sitecure-verifier.hc-web1992.workers.dev';
 }
 
 /**
