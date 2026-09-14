@@ -2,6 +2,11 @@
 /**
  * SiteCure Quarantine Vault View
  */
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
+// phpcs:disable WordPress.DB.DirectDatabaseQuery
+// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -17,8 +22,8 @@ $table_sites      = sitecure_get_table( 'sites' );
 
 $items = $wpdb->get_results( "
 	SELECT q.*, s.name as site_name 
-	FROM $table_quarantine q 
-	LEFT JOIN $table_sites s ON q.site_id = s.id 
+	FROM `{$table_quarantine}` q 
+	LEFT JOIN `{$table_sites}` s ON q.site_id = s.id 
 	WHERE q.original_path NOT LIKE '%sitecure%' 
 	ORDER BY q.id DESC" 
 );

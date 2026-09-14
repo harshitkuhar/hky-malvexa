@@ -2,6 +2,11 @@
 /**
  * SiteCure Audit Logs View
  */
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
+// phpcs:disable WordPress.DB.DirectDatabaseQuery
+// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -10,11 +15,12 @@ global $wpdb;
 $table_audit = sitecure_get_table( 'audit_logs' );
 $table_sites = sitecure_get_table( 'sites' );
 
-$logs = $wpdb->get_results( "
-	SELECT a.*, s.name as site_name 
-	FROM $table_audit a 
-	LEFT JOIN $table_sites s ON a.site_id = s.id 
-	ORDER BY a.id DESC LIMIT 100" 
+// phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+$logs = $wpdb->get_results(
+	"SELECT a.*, s.name as site_name 
+	FROM `{$table_audit}` a 
+	LEFT JOIN `{$table_sites}` s ON a.site_id = s.id 
+	ORDER BY a.id DESC LIMIT 100"
 );
 ?>
 

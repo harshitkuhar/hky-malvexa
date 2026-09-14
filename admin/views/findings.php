@@ -2,6 +2,13 @@
 /**
  * SiteCure Findings & Evidence View
  */
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
+// phpcs:disable WordPress.DB.DirectDatabaseQuery
+// phpcs:disable WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+// phpcs:disable WordPress.DB.PreparedSQL.NotPrepared
+// phpcs:disable WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare
+// phpcs:disable PluginCheck.Security.DirectDB.UnescapedDBParameter
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -11,49 +18,86 @@ $table_findings = sitecure_get_table( 'findings' );
 $table_sites = sitecure_get_table( 'sites' );
 
 $sites = sitecure_get_sites();
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI tab filter parameter.
 $selected_site_id = isset( $_GET['site_id'] ) ? (int) $_GET['site_id'] : 0;
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only UI tab filter parameter.
 $status_filter = isset( $_GET['status'] ) ? sanitize_text_field( wp_unslash( $_GET['status'] ) ) : 'new';
 
 // Auto-reopen any restored findings so they immediately appear in Active / Unresolved
-$wpdb->query( "UPDATE $table_findings SET status = 'new' WHERE status = 'restored'" );
+$wpdb->query( "UPDATE `{$table_findings}` SET status = 'new' WHERE status = 'restored'" );
 
 $table_quarantine = sitecure_get_table( 'quarantine' );
+$sitecure_esc     = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( 'sitecure' ) : addcslashes( 'sitecure', '_%\\' );
+$sitecure_like    = '%' . $sitecure_esc . '%';
 
-// Build filtered query
-$where_clauses = array(
-	"f.file_path NOT LIKE '%%sitecure%%'",
-);
-$query_params = array();
-
+// Build filtered query with explicit prepared statements
 if ( $status_filter === 'quarantined' ) {
-	$where_clauses[] = "f.status IN ('quarantined', 'cleaned')";
+	if ( $selected_site_id > 0 ) {
+		$findings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT f.*, s.name as site_name, s.url as site_url,
+				        (SELECT COUNT(*) FROM `{$table_quarantine}` q WHERE q.finding_id = f.id AND q.status = 'restored') as was_restored
+				FROM `{$table_findings}` f 
+				LEFT JOIN `{$table_sites}` s ON f.site_id = s.id 
+				WHERE f.file_path NOT LIKE %s AND f.status IN ('quarantined', 'cleaned') AND f.site_id = %d 
+				ORDER BY f.id DESC LIMIT 100",
+				$sitecure_like,
+				$selected_site_id
+			)
+		);
+	} else {
+		$findings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT f.*, s.name as site_name, s.url as site_url,
+				        (SELECT COUNT(*) FROM `{$table_quarantine}` q WHERE q.finding_id = f.id AND q.status = 'restored') as was_restored
+				FROM `{$table_findings}` f 
+				LEFT JOIN `{$table_sites}` s ON f.site_id = s.id 
+				WHERE f.file_path NOT LIKE %s AND f.status IN ('quarantined', 'cleaned') 
+				ORDER BY f.id DESC LIMIT 100",
+				$sitecure_like
+			)
+		);
+	}
 } else {
-	$where_clauses[] = "f.status = %s";
-	$query_params[] = 'new';
 	$status_filter = 'new';
+	if ( $selected_site_id > 0 ) {
+		$findings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT f.*, s.name as site_name, s.url as site_url,
+				        (SELECT COUNT(*) FROM `{$table_quarantine}` q WHERE q.finding_id = f.id AND q.status = 'restored') as was_restored
+				FROM `{$table_findings}` f 
+				LEFT JOIN `{$table_sites}` s ON f.site_id = s.id 
+				WHERE f.file_path NOT LIKE %s AND f.status = %s AND f.site_id = %d 
+				ORDER BY f.id DESC LIMIT 100",
+				$sitecure_like,
+				'new',
+				$selected_site_id
+			)
+		);
+	} else {
+		$findings = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT f.*, s.name as site_name, s.url as site_url,
+				        (SELECT COUNT(*) FROM `{$table_quarantine}` q WHERE q.finding_id = f.id AND q.status = 'restored') as was_restored
+				FROM `{$table_findings}` f 
+				LEFT JOIN `{$table_sites}` s ON f.site_id = s.id 
+				WHERE f.file_path NOT LIKE %s AND f.status = %s 
+				ORDER BY f.id DESC LIMIT 100",
+				$sitecure_like,
+				'new'
+			)
+		);
+	}
 }
-
-if ( $selected_site_id > 0 ) {
-	$where_clauses[] = "f.site_id = %d";
-	$query_params[] = $selected_site_id;
-}
-
-$where_sql = implode( ' AND ', $where_clauses );
-$query = $wpdb->prepare(
-	"SELECT f.*, s.name as site_name, s.url as site_url,
-	        (SELECT COUNT(*) FROM $table_quarantine q WHERE q.finding_id = f.id AND q.status = 'restored') as was_restored
-	FROM $table_findings f 
-	LEFT JOIN $table_sites s ON f.site_id = s.id 
-	WHERE $where_sql 
-	ORDER BY f.id DESC LIMIT 100",
-	$query_params
-);
-$findings = $wpdb->get_results( $query );
 
 // Counts for tabs (preserving site filter)
-$site_where = ( $selected_site_id > 0 ) ? $wpdb->prepare( "AND site_id = %d", $selected_site_id ) : '';
-$count_new = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new' AND file_path NOT LIKE '%%sitecure%%' $site_where" );
-$count_quarantined = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status IN ('quarantined', 'cleaned') AND file_path NOT LIKE '%%sitecure%%' $site_where" );
+if ( $selected_site_id > 0 ) {
+	$count_new = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table_findings}` WHERE status = 'new' AND file_path NOT LIKE %s AND site_id = %d", $sitecure_like, $selected_site_id ) );
+	$count_quarantined = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table_findings}` WHERE status IN ('quarantined', 'cleaned') AND file_path NOT LIKE %s AND site_id = %d", $sitecure_like, $selected_site_id ) );
+} else {
+	$count_new = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table_findings}` WHERE status = 'new' AND file_path NOT LIKE %s", $sitecure_like ) );
+	$count_quarantined = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM `{$table_findings}` WHERE status IN ('quarantined', 'cleaned') AND file_path NOT LIKE %s", $sitecure_like ) );
+}
 ?>
 
 <div class="wrap sitecure-wrap">

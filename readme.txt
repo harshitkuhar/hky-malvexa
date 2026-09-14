@@ -1,15 +1,15 @@
-=== SiteCure – Malware Scanner, Spam Cleaner & Security Vault ===
+=== SiteCure ===
 Contributors: harshitkuhar
 Donate link: https://github.com/harshitkuhar
 Tags: malware scanner, security, clean malware, seo spam, quarantine
 Requires at least: 6.0
-Tested up to: 6.7
+Tested up to: 7.1
 Requires PHP: 7.4
 Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity restorer, and isolated quarantine storage vault with 1-click rollback.
+Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity repair, and isolated quarantine vault with 1-click rollback.
 
 == Description ==
 

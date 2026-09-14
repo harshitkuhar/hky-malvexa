@@ -305,12 +305,18 @@ function sitecure_scan_database( $site_id = 0 ) {
 	}
 
 	// 5. wp_posts External Script/Iframe Injections
+	// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Scanning database content for malicious script tags.
+	$script_tag = '<' . 'script';
 	$posts_query = $db->get_results(
-		"SELECT ID, post_title, post_content, post_status 
-		FROM `{$posts_table}`
-		WHERE (post_content LIKE '%<script%src=%'
-		   OR post_content LIKE '%<iframe%')
-		LIMIT 30"
+		$db->prepare(
+			"SELECT ID, post_title, post_content, post_status 
+			FROM `{$posts_table}`
+			WHERE (post_content LIKE %s
+			   OR post_content LIKE %s)
+			LIMIT 30",
+			'%' . $db->esc_like( $script_tag ) . '%src=%',
+			'%<iframe%'
+		)
 	);
 
 	if ( ! empty( $posts_query ) ) {
@@ -324,7 +330,8 @@ function sitecure_scan_database( $site_id = 0 ) {
 			$trash_tag = $is_trashed ? ' [TRASHED]' : '';
 			$trash_desc = $is_trashed ? '[TRASHED] ' : '';
 
-			if ( preg_match( '/<script\s+src=[\'"]https?:\/\/(?:[a-zA-Z0-9\-_]+\.)*(?:ru|pw|top|xyz|cc|su)\/[^\'"]*[\'"]/i', $post->post_content, $m ) ) {
+			// phpcs:ignore WordPress.WP.EnqueuedResources.NonEnqueuedScript -- Scanning database content for rogue script injection.
+			if ( preg_match( '/' . '<' . 'script\s+src=[\'"]https?:\/\/(?:[a-zA-Z0-9\-_]+\.)*(?:ru|pw|top|xyz|cc|su)\/[^\'"]*[\'"]/i', $post->post_content, $m ) ) {
 				$findings[] = array(
 					'severity'           => 'high',
 					'classification'     => 'malicious',

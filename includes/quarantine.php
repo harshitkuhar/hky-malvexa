@@ -3,6 +3,8 @@
  * SiteCure Procedural Safe Quarantine & Rollback System
  * Implements Golden Recovery Rule: Isolates files in protected storage with 1-click restore
  */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.SlowDBQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom database quarantine vault queries and Elementor postmeta cleaner.
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -153,7 +155,7 @@ function sitecure_quarantine_file( $finding_id ) {
 	}
 
 	// 2. Remove or neutralize the original file
-	@unlink( $full_path );
+	wp_delete_file( $full_path );
 
 	// 3. Log quarantine record
 	$wpdb->insert(
@@ -1131,7 +1133,7 @@ function sitecure_clean_elementor_tree( &$elements, $pattern ) {
 			if ( isset( $item['settings']['editor'] ) ) {
 				if ( preg_match( $pattern, $item['settings']['editor'] ) || preg_match( '/(?:' . $casino_domains_kw . ')/i', $item['settings']['editor'] ) ) {
 					$item['settings']['editor'] = sitecure_clean_seo_spam_content( $item['settings']['editor'] );
-					if ( empty( trim( strip_tags( $item['settings']['editor'] ) ) ) ) {
+					if ( empty( trim( wp_strip_all_tags( $item['settings']['editor'] ) ) ) ) {
 						unset( $elements[ $k ] );
 						continue;
 					}

@@ -3,6 +3,8 @@
  * SiteCure Procedural Master Scan Engine
  * Chunked batched scanner guaranteeing zero server timeouts on any hosting
  */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom database queries for security scan batches and findings.
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -39,7 +41,7 @@ function sitecure_init_scan( $site_id, $scan_type = 'deep' ) {
 		}
 	} else {
 		// Auto-detect sibling directory by site URL slug (e.g. /betterdays)
-		$url_path = parse_url( $site->url, PHP_URL_PATH );
+		$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
 		if ( ! empty( $url_path ) ) {
 			$slug = trim( $url_path, '/' );
 			if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
@@ -127,7 +129,7 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 		} elseif ( ! empty( $site->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' ) ) ) {
 			$site_root = dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' );
 		} else {
-			$url_path = parse_url( $site->url, PHP_URL_PATH );
+			$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
 			if ( ! empty( $url_path ) ) {
 				$slug = trim( $url_path, '/' );
 				if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
@@ -317,7 +319,14 @@ function sitecure_finish_scan( $scan_id ) {
 	}
 
 	// Check if initial database & persistence checks already ran at offset 0
-	$already_ran_db = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_findings WHERE scan_id = %d AND (category IN ('wpcode_snippet', 'db_option_injection', 'seo_spam_injection', 'persistence_dropin', 'persistence_mu') OR file_path LIKE 'database:%%')", $scan_id ) );
+	$db_like = $wpdb->esc_like( 'database:' ) . '%';
+	$already_ran_db = (int) $wpdb->get_var(
+		$wpdb->prepare(
+			"SELECT COUNT(*) FROM {$table_findings} WHERE scan_id = %d AND (category IN ('wpcode_snippet', 'db_option_injection', 'seo_spam_injection', 'persistence_dropin', 'persistence_mu') OR file_path LIKE %s)",
+			$scan_id,
+			$db_like
+		)
+	);
 	if ( $already_ran_db === 0 ) {
 		$site_root = sitecure_get_site_root( $scan->site_id );
 		$persistence_hits = sitecure_scan_dropins_and_mu( $site_root );

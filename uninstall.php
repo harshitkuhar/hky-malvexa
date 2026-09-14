@@ -10,6 +10,8 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 	exit;
 }
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.NamingConventions.PrefixAllGlobals, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Plugin uninstaller drops custom plugin tables upon explicit deletion.
+
 /**
  * Recursively delete a directory and all of its contents
  */
@@ -18,8 +20,19 @@ function sitecure_uninstall_recursive_rmdir( $dir ) {
 		return;
 	}
 
+	global $wp_filesystem;
+	if ( empty( $wp_filesystem ) ) {
+		require_once ABSPATH . '/wp-admin/includes/file.php';
+		WP_Filesystem();
+	}
+
+	if ( ! empty( $wp_filesystem ) ) {
+		$wp_filesystem->delete( $dir, true );
+		return;
+	}
+
 	$items = @scandir( $dir );
-	if ( false === $items ) {
+	if ( ! is_array( $items ) ) {
 		return;
 	}
 
@@ -32,10 +45,11 @@ function sitecure_uninstall_recursive_rmdir( $dir ) {
 		if ( is_dir( $path ) ) {
 			sitecure_uninstall_recursive_rmdir( $path );
 		} else {
-			@unlink( $path );
+			wp_delete_file( $path );
 		}
 	}
 
+	// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_rmdir
 	@rmdir( $dir );
 }
 
@@ -59,7 +73,7 @@ function sitecure_uninstall_purge_site_data() {
 				} elseif ( ! empty( $cs->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $cs->wp_path, '/\\' ) ) ) {
 					$site_root = dirname( ABSPATH ) . '/' . ltrim( $cs->wp_path, '/\\' );
 				} else {
-					$url_path = parse_url( $cs->url, PHP_URL_PATH );
+					$url_path = wp_parse_url( $cs->url, PHP_URL_PATH );
 					if ( ! empty( $url_path ) ) {
 						$slug = trim( $url_path, '/' );
 						if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {

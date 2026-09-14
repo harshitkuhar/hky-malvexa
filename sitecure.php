@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:       SiteCure – Malware Scanner, Spam Cleaner & Security Vault
+ * Plugin Name:       SiteCure
  * Plugin URI:        https://github.com/harshitkuhar/sitecure
- * Description:       Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity restorer, and isolated quarantine storage vault with 1-click rollback.
+ * Description:       Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity repair, and isolated quarantine vault with 1-click rollback.
  * Version:           1.0.0
  * Author:            SiteCure Team - Harshit
  * Author URI:        https://github.com/harshitkuhar
@@ -10,7 +10,7 @@
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.txt
  * Text Domain:       sitecure
  * Requires at least: 6.0
- * Tested up to:      6.7
+ * Tested up to:      7.1
  * Requires PHP:      7.4
  */
 
@@ -38,7 +38,7 @@ if ( ! defined( 'SITECURE_BASENAME' ) ) {
  * If any core SiteCure plugin file was accidentally moved to quarantine, automatically restore it!
  */
 function sitecure_self_heal_missing_files() {
-	$includes = array(
+	$sitecure_includes = array(
 		'db.php', 'crypto.php', 'signatures.php', 'classifier.php', 'integrity.php',
 		'malware-detector.php', 'uploads-analyzer.php', 'config-analyzer.php',
 		'persistence.php', 'database-scanner.php', 'engine.php', 'quarantine.php',
@@ -46,14 +46,14 @@ function sitecure_self_heal_missing_files() {
 	);
 
 	$upload_dir = wp_upload_dir();
-	$quarantine_dirs = array(
+	$sitecure_quarantine_dirs = array(
 		$upload_dir['basedir'] . '/sitecure-quarantine',
 	);
 
-	foreach ( $includes as $file ) {
+	foreach ( $sitecure_includes as $file ) {
 		$target = SITECURE_PLUGIN_DIR . 'includes/' . $file;
 		if ( ! file_exists( $target ) ) {
-			foreach ( $quarantine_dirs as $qdir ) {
+			foreach ( $sitecure_quarantine_dirs as $qdir ) {
 				if ( is_dir( $qdir ) ) {
 					$matches = glob( $qdir . '/' . $file . '.*.quarantined' );
 					if ( ! empty( $matches ) ) {
@@ -78,10 +78,10 @@ $sitecure_core_files = array(
 	'restorer.php', 'verifier.php', 'cloud-verifier.php', 'admin.php', 'ajax.php',
 );
 
-foreach ( $sitecure_core_files as $core_file ) {
-	$file_path = SITECURE_PLUGIN_DIR . 'includes/' . $core_file;
-	if ( file_exists( $file_path ) ) {
-		require_once $file_path;
+foreach ( $sitecure_core_files as $sitecure_core_file ) {
+	$sitecure_core_path = SITECURE_PLUGIN_DIR . 'includes/' . $sitecure_core_file;
+	if ( file_exists( $sitecure_core_path ) ) {
+		require_once $sitecure_core_path;
 	}
 }
 

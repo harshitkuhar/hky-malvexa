@@ -19,18 +19,14 @@ function sitecure_repair_core_file( $relative_path, $version = '', $site_id = 0 
 
 	// Create safety backup on client server first
 	if ( file_exists( $full_path ) ) {
-		$backup_dir = function_exists( 'sitecure_get_site_quarantine_dir' ) ? sitecure_get_site_quarantine_dir( $site_id, 'backups' ) : ABSPATH . 'wp-content/uploads/sitecure-quarantine/backups';
+		$upload_dir = wp_upload_dir();
+		$backup_dir = function_exists( 'sitecure_get_site_quarantine_dir' ) ? sitecure_get_site_quarantine_dir( $site_id, 'backups' ) : $upload_dir['basedir'] . '/sitecure-quarantine/backups';
 		@copy( $full_path, $backup_dir . '/' . sanitize_file_name( basename( $norm_path ) ) . '.' . time() . '.bak' );
 	}
 
-	// Download official file from WordPress SVN / GitHub official mirror
+	// Download official file directly from WordPress.org official SVN repository
 	$source_url = "https://core.svn.wordpress.org/tags/{$version}/" . $norm_path;
-	$response = wp_remote_get( $source_url, array( 'timeout' => 20 ) );
-
-	if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
-		$fallback_url = "https://raw.githubusercontent.com/WordPress/WordPress/{$version}/" . $norm_path;
-		$response = wp_remote_get( $fallback_url, array( 'timeout' => 20 ) );
-	}
+	$response   = wp_remote_get( $source_url, array( 'timeout' => 20 ) );
 
 	if ( is_wp_error( $response ) || wp_remote_retrieve_response_code( $response ) !== 200 ) {
 		return new WP_Error( 'download_failed', 'Could not download official core file from WordPress.org repository.' );
@@ -46,6 +42,7 @@ function sitecure_repair_core_file( $relative_path, $version = '', $site_id = 0 
 		wp_mkdir_p( $dest_dir );
 	}
 
+	// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.ABSPATHDetected -- Legitimate WordPress core file repair from official SVN repository.
 	if ( false === @file_put_contents( $full_path, $clean_content ) ) {
 		return new WP_Error( 'write_failed', 'Could not write repaired core file to disk.' );
 	}

@@ -49,7 +49,7 @@ function sitecure_normalize_domain( $input ) {
 	}
 
 	$clean = trim( strtolower( $input ) );
-	$host  = parse_url( $clean, PHP_URL_HOST );
+	$host  = wp_parse_url( $clean, PHP_URL_HOST );
 	if ( ! empty( $host ) ) {
 		$clean = $host;
 	} else {

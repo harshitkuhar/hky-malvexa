@@ -2,6 +2,8 @@
 /**
  * SiteCure Managed Sites View
  */
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }

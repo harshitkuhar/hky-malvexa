@@ -3,6 +3,8 @@
  * SiteCure Procedural Database Handler
  * Dedicated custom tables using $wpdb
  */
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dedicated custom database tables for SiteCure scans, findings, quarantine, and audit logs.
+
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -418,7 +420,7 @@ function sitecure_get_site_root( $site_id ) {
 		} elseif ( ! empty( $site->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' ) ) ) {
 			$site_root = dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' );
 		} else {
-			$url_path = parse_url( $site->url, PHP_URL_PATH );
+			$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
 			if ( ! empty( $url_path ) ) {
 				$slug = trim( $url_path, '/' );
 				if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
