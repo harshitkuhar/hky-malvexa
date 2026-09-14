@@ -43,6 +43,13 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
    - Free plan includes 1 active target site.
    - Connect client websites via local filesystem paths or secure SFTP connections for agency management.
 
+### Privacy, Data Ownership & Security Policy
+
+* **Zero External Data Storage**: We do **not** save or store any of your website files, database records, audit logs, scan results, or server passwords on our servers.
+* **Hosted Site Security**: When scanning and repairing your hosted WordPress site, everything is processed and saved strictly on your own web hosting server.
+* **External Client Websites (Pro)**: When managing an external client website via SFTP/SSH, all scan reports, findings, and quarantine backups are saved directly on the external website's server. No files or private site contents are ever sent to our servers.
+* **Double Security Best Practice**: While SFTP/SSH credentials in your database are AES-256 encrypted using your site's private WordPress salts, we always recommend updating or changing the FTP/SSH password on the external server once malware cleanup is finished for double security.
+
 == Installation ==
 
 1. Upload the `sitecure` folder to the `/wp-content/plugins/` directory, or install the ZIP file via **Plugins > Add New > Upload Plugin**.
@@ -66,6 +73,9 @@ SiteCure downloads official cryptographic checksums from the WordPress.org API f
 
 = Does SiteCure connect to external cloud services? =
 SiteCure is fully operational standalone on your server. For multi-site management and license validation, SiteCure optionally connects to the SiteCure Cloud Verification microservice to verify domain quotas and active plan status.
+
+= Where is scan data, database info, and server credentials stored? =
+We do not store your files, scan results, or server passwords on our servers. When scanning your hosted site, everything stays on your own hosting server. When managing external client sites, all files and scan reports are saved directly on the client's external server. Even though credentials in your database are AES-256 encrypted using your WordPress salts, we always recommend updating or changing the FTP/SSH password on the external server once malware cleanup is complete for double security.
 
 == Screenshots ==
 
