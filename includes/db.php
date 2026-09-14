@@ -252,7 +252,7 @@ function sitecure_is_dev_mode() {
 		}
 	}
 
-	return (bool) apply_filters( 'sitecure_is_pro', false );
+	return false;
 }
 
 /**

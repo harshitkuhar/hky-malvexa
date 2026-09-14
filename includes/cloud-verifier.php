@@ -33,16 +33,7 @@ function sitecure_get_install_id() {
  * @return string
  */
 function sitecure_get_cloud_endpoint() {
-	if ( defined( 'SITECURE_CLOUD_API_URL' ) && ! empty( SITECURE_CLOUD_API_URL ) ) {
-		return rtrim( SITECURE_CLOUD_API_URL, '/' );
-	}
-
-	$saved = get_option( 'sitecure_cloud_api_url', '' );
-	if ( ! empty( $saved ) ) {
-		return rtrim( $saved, '/' );
-	}
-
-	// Default live Cloudflare Worker microservice endpoint
+	// Official production Cloudflare Worker microservice endpoint
 	return 'https://sitecure-verifier.hc-web1992.workers.dev';
 }
 
@@ -185,9 +176,13 @@ function sitecure_cloud_verify_domain( $domain_or_url ) {
 		)
 	);
 
-	// Fallback: If cloud is offline, allow if site exists in local DB
+	// Fail-closed offline protection: If cloud is offline, only allow if this is the single primary local site
 	if ( is_wp_error( $response ) ) {
-		return true;
+		$home_domain = sitecure_normalize_domain( home_url() );
+		if ( $domain === $home_domain || ( function_exists( 'sitecure_get_sites' ) && count( sitecure_get_sites() ) <= 1 ) ) {
+			return true;
+		}
+		return new WP_Error( 'quota_verification_failed', __( 'Could not verify client domain with license server. Please verify your internet connection.', 'sitecure' ) );
 	}
 
 	$code = wp_remote_retrieve_response_code( $response );
@@ -204,7 +199,7 @@ function sitecure_cloud_verify_domain( $domain_or_url ) {
 		return true;
 	}
 
-	return true;
+	return new WP_Error( 'quota_exceeded', __( 'Domain is not authorized for scanning. Upgrade to SiteCure Pro to manage multiple websites.', 'sitecure' ) );
 }
 
 /**

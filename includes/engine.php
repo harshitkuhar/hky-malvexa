@@ -21,6 +21,14 @@ function sitecure_init_scan( $site_id, $scan_type = 'deep' ) {
 		return new WP_Error( 'not_found', 'Site not found.' );
 	}
 
+	// Option B Security: Verify that domain is authorized by cloud license service before scanning
+	if ( function_exists( 'sitecure_cloud_verify_domain' ) ) {
+		$domain_check = sitecure_cloud_verify_domain( $site->url );
+		if ( is_wp_error( $domain_check ) ) {
+			return $domain_check;
+		}
+	}
+
 	// Resolve target site path dynamically
 	$scan_path = ABSPATH;
 	if ( ! empty( $site->wp_path ) ) {
