@@ -43,9 +43,6 @@ $recent_findings = $wpdb->get_results( "SELECT * FROM `{$table_findings}` WHERE 
 			<a href="<?php echo esc_url( admin_url( 'admin.php?page=hkymalvexa-findings' ) ); ?>" class="wpd-btn wpd-btn-emergency">
 				<span class="dashicons dashicons-controls-play"></span> Emergency Scan
 			</a>
-			<button id="wpd-btn-verify-site" class="wpd-btn wpd-btn-primary">
-				<span class="dashicons dashicons-heart"></span> Verify Core Integrity
-			</button>
 		</div>
 	</div>
 

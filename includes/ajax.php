@@ -18,7 +18,6 @@ function hkymalvexa_ajax_init() {
 	add_action( 'wp_ajax_hkymalvexa_clean_file', 'hkymalvexa_ajax_handle_clean_file' );
 	add_action( 'wp_ajax_hkymalvexa_restore_file', 'hkymalvexa_ajax_handle_restore_file' );
 	add_action( 'wp_ajax_hkymalvexa_repair_core', 'hkymalvexa_ajax_handle_repair_core' );
-	add_action( 'wp_ajax_hkymalvexa_verify_site', 'hkymalvexa_ajax_handle_verify_site' );
 	add_action( 'wp_ajax_hkymalvexa_view_code', 'hkymalvexa_ajax_handle_view_code' );
 }
 
@@ -137,17 +136,6 @@ function hkymalvexa_ajax_handle_repair_core() {
 	wp_send_json_success( array( 'message' => 'Core file successfully repaired from WordPress.org.' ) );
 }
 
-/**
- * Verify overall site health
- */
-function hkymalvexa_ajax_handle_verify_site() {
-	hkymalvexa_verify_ajax_auth();
-
-	$site_id = isset( $_POST['site_id'] ) ? (int) $_POST['site_id'] : 1;
-	$result = hkymalvexa_verify_site_health( $site_id );
-
-	wp_send_json_success( $result );
-}
 
 /**
  * View code evidence around an infected line

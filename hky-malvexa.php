@@ -40,7 +40,7 @@ $hkymalvexa_core_files = array(
 	'db.php', 'signatures.php', 'classifier.php', 'integrity.php',
 	'malware-detector.php', 'uploads-analyzer.php', 'config-analyzer.php',
 	'persistence.php', 'database-scanner.php', 'engine.php', 'quarantine.php',
-	'restorer.php', 'verifier.php', 'admin.php', 'ajax.php',
+	'restorer.php', 'admin.php', 'ajax.php',
 );
 
 foreach ( $hkymalvexa_core_files as $hkymalvexa_core_file ) {

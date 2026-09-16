@@ -17,3 +17,7 @@ temp/
 
 # Node / Dependencies (if any)
 node_modules/
+
+# Archives
+*.zip
+

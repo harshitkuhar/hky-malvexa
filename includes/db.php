@@ -243,6 +243,14 @@ function hkymalvexa_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 		if ( ! is_dir( $target_sub ) ) {
 			wp_mkdir_p( $target_sub );
 		}
+		$sub_htaccess = $target_sub . '/.htaccess';
+		if ( ! file_exists( $sub_htaccess ) ) {
+			@file_put_contents( $sub_htaccess, $htaccess_content );
+		}
+		$sub_webconfig = $target_sub . '/web.config';
+		if ( ! file_exists( $sub_webconfig ) ) {
+			@file_put_contents( $sub_webconfig, $webconfig_content );
+		}
 		$sub_index = $target_sub . '/index.php';
 		if ( ! file_exists( $sub_index ) ) {
 			@file_put_contents( $sub_index, "<?php // Silence is golden.\nexit;\n" );

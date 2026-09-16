@@ -157,29 +157,6 @@
       });
     });
 
-    // 6. Verify Site Health Action
-    $('#wpd-btn-verify-site').on('click', function (e) {
-      e.preventDefault();
-      var btn = $(this);
-      btn.prop('disabled', true).text('Verifying...');
-
-      $.post(hkymalvexa_data.ajax_url, {
-        action: 'hkymalvexa_verify_site',
-        nonce: hkymalvexa_data.nonce
-      }, function (res) {
-        btn.prop('disabled', false).text('Run Health Verification');
-        if (res.success) {
-          var r = res.data;
-          var msg = 'Verification Complete!\nStatus: ' + r.status.toUpperCase() + '\nResponse Time: ' + r.response_ms + 'ms\n\nChecks:\n';
-          for (var k in r.checks) {
-            msg += '• ' + k + ': ' + r.checks[k].message + '\n';
-          }
-          alert(msg);
-        } else {
-          alert('Verification failed to execute.');
-        }
-      });
-    });
 
     // Modal Close
     $(document).on('click', '.wpd-modal-close', function () {
