@@ -39,16 +39,15 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
 4. **Isolated Vault & 1-Click Rollback**:
    - Quarantined files are neutralized and moved outside the public web root with PHP execution disabled.
    - 1-click restore instantly writes the pristine backup back to disk or recovers the original post content.
-5. **Multi-Site Portfolio Ready**:
-   - Manage and scan your hosted WordPress site with zero artificial limitations.
-   - Connect client websites via local filesystem paths or secure SFTP connections for agency management.
+5. **Tamper-Resistant Incident & Audit Trail**:
+   - Immutable audit logging of every scan execution, quarantined threat, core replacement, and remediation action.
+   - 100% self-hosted local audit trail for security compliance and post-incident investigation.
 
-### Privacy, Data Ownership & Security Policy
+### Privacy & Data Ownership Policy
 
-* **Zero External Data Storage**: We do **not** save or store any of your website files, database records, audit logs, scan results, or server passwords on our servers.
-* **Hosted Site Security**: When scanning and repairing your hosted WordPress site, everything is processed and saved strictly on your own web hosting server.
-* **External Client Websites**: When managing an external client website via SFTP/SSH, all scan reports, findings, and quarantine backups are saved directly on the external website's server. No files or private site contents are ever sent to our servers.
-* **Double Security Best Practice**: While SFTP/SSH credentials in your database are AES-256 encrypted using your site's private WordPress salts, we always recommend updating or changing the FTP/SSH password on the external server once malware cleanup is finished for double security.
+* **100% Self-Hosted & Local**: HKY MalVexa runs entirely on your own WordPress hosting server.
+* **Zero External Data Transmission**: We do not collect, transmit, or store any of your website files, database records, scan results, or user credentials on external servers.
+* **Full Data Ownership**: All quarantine vaults, safety backups, and incident logs remain strictly on your own server and protected WordPress uploads directory.
 
 == External Services ==
 
