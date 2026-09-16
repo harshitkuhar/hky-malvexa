@@ -20,7 +20,17 @@ function hkymalvexa_init_scan( $site_id, $scan_type = 'deep' ) {
 
 	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	if ( ! $site ) {
-		return new WP_Error( 'not_found', 'Site not found.' );
+		$site_id = hkymalvexa_get_current_site_id();
+		$site    = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
+	}
+	if ( ! $site ) {
+		$site = (object) array(
+			'id'          => 1,
+			'name'        => get_bloginfo( 'name' ) ? get_bloginfo( 'name' ) : 'This WordPress Site',
+			'url'         => home_url(),
+			'wp_path'     => ABSPATH,
+			'access_mode' => 'local',
+		);
 	}
 
 	// Resolve target site path dynamically
@@ -372,7 +382,7 @@ function hkymalvexa_catalog_files( $base_dir ) {
 			try {
 				if ( $item->isFile() ) {
 					$path = str_replace( '\\', '/', $item->getPathname() );
-					if ( strpos( $path, 'hkymalvexa-quarantine' ) !== false || strpos( $path, 'plugins/hkymalvexa' ) !== false || strpos( $path, '.git' ) !== false ) {
+					if ( strpos( $path, 'hky-malvexa-quarantine' ) !== false || strpos( $path, 'hkymalvexa-quarantine' ) !== false || strpos( $path, 'hky-malvexa' ) !== false || strpos( $path, 'hkymalvexa' ) !== false || strpos( $path, '.git' ) !== false ) {
 						continue;
 					}
 					$rel = ltrim( substr( $path, strlen( $base_dir ) ), '/\\' );

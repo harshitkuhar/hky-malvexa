@@ -89,25 +89,7 @@ function hkymalvexa_install_database_tables() {
 		);
 	}
 
-	// 2. Connections Table (Encrypted Credentials)
-	$table_connections = hkymalvexa_get_table( 'connections' );
-	$sql_connections = "CREATE TABLE $table_connections (
-		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-		site_id bigint(20) unsigned NOT NULL,
-		connection_type varchar(50) NOT NULL,
-		host varchar(255) DEFAULT NULL,
-		port int(11) DEFAULT 22,
-		username varchar(191) DEFAULT NULL,
-		encrypted_password longtext DEFAULT NULL,
-		encrypted_key longtext DEFAULT NULL,
-		remote_path varchar(255) DEFAULT NULL,
-		created_at datetime DEFAULT CURRENT_TIMESTAMP,
-		PRIMARY KEY  (id),
-		KEY site_id (site_id)
-	) $charset_collate;";
-	dbDelta( $sql_connections );
-
-	// 3. Scans Table
+	// 2. Scans Table
 	$table_scans = hkymalvexa_get_table( 'scans' );
 	$sql_scans = "CREATE TABLE $table_scans (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -196,16 +178,8 @@ function hkymalvexa_install_database_tables() {
  * @return string Full filesystem path to the directory on the client site
  */
 function hkymalvexa_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
-	if ( empty( $site_id ) || (int) $site_id === 1 ) {
-		$upload = wp_upload_dir();
-		$quarantine_dir = $upload['basedir'] . '/hky-malvexa-quarantine';
-	} else {
-		$site_root = hkymalvexa_get_site_root( $site_id );
-		if ( empty( $site_root ) ) {
-			return '';
-		}
-		$quarantine_dir = $site_root . '/wp-content/uploads/hky-malvexa-quarantine';
-	}
+	$upload = wp_upload_dir();
+	$quarantine_dir = $upload['basedir'] . '/hky-malvexa-quarantine';
 
 	if ( ! is_dir( $quarantine_dir ) ) {
 		wp_mkdir_p( $quarantine_dir );
@@ -290,84 +264,6 @@ function hkymalvexa_init_quarantine_storage( $site_id = 0 ) {
 	return hkymalvexa_get_site_quarantine_dir( $site_id );
 }
 
-/**
- * Check if another site can be added
- *
- * @return bool
- */
-function hkymalvexa_can_add_site() {
-	return true;
-}
-
-/**
- * Register current hosted site with 1-click
- *
- * @return int|WP_Error Site ID or error
- */
-function hkymalvexa_register_local_site() {
-	global $wpdb;
-	$table = hkymalvexa_get_table( 'sites' );
-
-	// Check if already registered
-	$existing = $wpdb->get_row( "SELECT * FROM $table WHERE access_mode = 'local' LIMIT 1" );
-	if ( $existing ) {
-		return (int) $existing->id;
-	}
-
-	$name = 'HKY MalVexa';
-
-	$wpdb->insert(
-		$table,
-		array(
-			'name'          => 'HKY MalVexa (Current Site)',
-			'url'           => home_url(),
-			'environment'   => 'production',
-			'access_mode'   => 'local',
-			'wp_path'       => ABSPATH,
-			'health_status' => 'healthy',
-			'created_at'    => current_time( 'mysql' ),
-		)
-	);
-
-	$site_id = (int) $wpdb->insert_id;
-	hkymalvexa_log_audit( $site_id, 'register_site', 'local', "Registered hosted site '{$name}' as Site #{$site_id}" );
-
-	return $site_id;
-}
-
-/**
- * Delete a managed site and its associated scan records
- *
- * @param int $site_id
- * @return bool
- */
-function hkymalvexa_delete_site( $site_id ) {
-	global $wpdb;
-	$site_id = (int) $site_id;
-	if ( $site_id <= 0 ) {
-		return false;
-	}
-
-	$table_sites      = hkymalvexa_get_table( 'sites' );
-	$table_scans      = hkymalvexa_get_table( 'scans' );
-	$table_findings   = hkymalvexa_get_table( 'findings' );
-	$table_quarantine = hkymalvexa_get_table( 'quarantine' );
-	$table_audit      = hkymalvexa_get_table( 'audit_logs' );
-
-	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
-	if ( ! $site ) {
-		return false;
-	}
-
-	// Delete from tables
-	$wpdb->delete( $table_sites, array( 'id' => $site_id ) );
-	$wpdb->delete( $table_scans, array( 'site_id' => $site_id ) );
-	$wpdb->delete( $table_findings, array( 'site_id' => $site_id ) );
-	$wpdb->delete( $table_quarantine, array( 'site_id' => $site_id ) );
-	$wpdb->delete( $table_audit, array( 'site_id' => $site_id ) );
-
-	return true;
-}
 
 /**
  * Log an audit event
@@ -414,24 +310,8 @@ function hkymalvexa_get_sites() {
  * @param int|object $site_or_id
  * @return string
  */
-function hkymalvexa_get_site_root( $site_or_id ) {
-	global $wpdb;
-
-	if ( is_object( $site_or_id ) ) {
-		$site = $site_or_id;
-	} else {
-		$site_id     = (int) $site_or_id;
-		$table_sites = hkymalvexa_get_table( 'sites' );
-		$site        = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
-	}
-
-	$site_root = ABSPATH;
-	if ( $site && ! empty( $site->wp_path ) && @is_dir( $site->wp_path ) ) {
-		$real      = realpath( $site->wp_path );
-		$site_root = $real ? $real : $site->wp_path;
-	}
-
-	return rtrim( str_replace( '\\', '/', $site_root ), '/' );
+function hkymalvexa_get_site_root( $site_or_id = null ) {
+	return rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 }
 
 /**

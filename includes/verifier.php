@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 function hkymalvexa_verify_site_health( $site_url = '' ) {
-	if ( empty( $site_url ) ) {
+	if ( empty( $site_url ) || is_numeric( $site_url ) || ! filter_var( $site_url, FILTER_VALIDATE_URL ) ) {
 		$site_url = home_url();
 	}
 

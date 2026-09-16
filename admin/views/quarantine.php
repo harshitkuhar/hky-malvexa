@@ -20,12 +20,18 @@ global $wpdb;
 $table_quarantine = hkymalvexa_get_table( 'quarantine' );
 $table_sites      = hkymalvexa_get_table( 'sites' );
 
-$items = $wpdb->get_results( "
-	SELECT q.*, s.name as site_name 
-	FROM `{$table_quarantine}` q 
-	LEFT JOIN `{$table_sites}` s ON q.site_id = s.id 
-	WHERE q.original_path NOT LIKE '%hkymalvexa%' 
-	ORDER BY q.id DESC" 
+$hkymalvexa_esc  = method_exists( $wpdb, 'esc_like' ) ? $wpdb->esc_like( 'hky-malvexa' ) : addcslashes( 'hky-malvexa', '_%\\' );
+$hkymalvexa_like = '%' . $hkymalvexa_esc . '%';
+
+$items = $wpdb->get_results(
+	$wpdb->prepare(
+		"SELECT q.*, s.name as site_name 
+		FROM `{$table_quarantine}` q 
+		LEFT JOIN `{$table_sites}` s ON q.site_id = s.id 
+		WHERE q.original_path NOT LIKE %s 
+		ORDER BY q.id DESC",
+		$hkymalvexa_like
+	)
 );
 ?>
 
@@ -63,11 +69,6 @@ $items = $wpdb->get_results( "
 							<tr>
 								<td>
 									<strong style="color: var(--wpd-text-main); font-size: 13px;"><?php echo esc_html( $item->original_path ); ?></strong>
-									<?php if ( ! empty( $item->site_name ) ) : ?>
-										<span class="wpd-badge" style="background: #e0f2fe; color: #0284c7; border-color: #bae6fd; font-size: 11px; margin-left: 6px;">
-											<?php echo esc_html( $item->site_name ); ?>
-										</span>
-									<?php endif; ?>
 								</td>
 								<td><code style="font-size: 11px;"><?php echo esc_html( substr( $item->original_hash, 0, 16 ) ); ?>...</code></td>
 								<td style="max-width: 260px;"><?php echo esc_html( wp_trim_words( $item->reason, 8 ) ); ?></td>

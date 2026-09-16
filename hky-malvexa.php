@@ -37,7 +37,7 @@ if ( ! defined( 'HKYMALVEXA_BASENAME' ) ) {
  * Safe procedural core inclusions
  */
 $hkymalvexa_core_files = array(
-	'db.php', 'crypto.php', 'signatures.php', 'classifier.php', 'integrity.php',
+	'db.php', 'signatures.php', 'classifier.php', 'integrity.php',
 	'malware-detector.php', 'uploads-analyzer.php', 'config-analyzer.php',
 	'persistence.php', 'database-scanner.php', 'engine.php', 'quarantine.php',
 	'restorer.php', 'verifier.php', 'admin.php', 'ajax.php',

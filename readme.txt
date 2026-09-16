@@ -51,11 +51,18 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
 
 == External Services ==
 
-This plugin connects to the official WordPress.org Core Checksum API exclusively during core integrity verification:
+This plugin connects to official WordPress.org services exclusively for core integrity verification and file repair:
+
 * **Service**: Official WordPress.org Core Checksum API (https://api.wordpress.org/core/checksums/1.0/)
 * **Purpose**: Fetches official cryptographic hashes for pristine WordPress core files corresponding to your installed WordPress version and locale to detect modified or infected core files.
-* **Data Sent**: WordPress core version and locale (e.g., `version=6.6.1&locale=en_US`). No personal data, credentials, file contents, or server details are sent.
+* **Data Sent**: WordPress core version and locale (e.g., `version=6.7&locale=en_US`). No personal data, credentials, file contents, or server details are sent.
 * **Terms & Privacy**: Provided by the WordPress Foundation under the official WordPress.org Privacy Policy: https://wordpress.org/about/privacy/
+
+* **Service**: Official WordPress.org Core Repository (https://core.svn.wordpress.org/)
+* **Purpose**: Allows administrators to download an untouched, official copy of an altered WordPress core file directly from the official WordPress repository when requesting a core repair.
+* **Data Sent**: Target core file path requested for download. No personal data, user credentials, or site information is sent.
+* **Terms & Privacy**: Provided by the WordPress Foundation under the official WordPress.org Privacy Policy: https://wordpress.org/about/privacy/
+
 
 == Installation ==
 

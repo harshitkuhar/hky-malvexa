@@ -61,38 +61,11 @@ function hkymalvexa_uninstall_purge_site_data() {
 
 	$host_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 
-	// 1. Purge quarantine vaults from all client/external sites BEFORE dropping tables
-	$table_sites = $wpdb->prefix . 'hkymalvexa_sites';
-	if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table_sites}'" ) === $table_sites ) {
-		$client_sites = $wpdb->get_results( "SELECT * FROM `{$table_sites}`" );
-		if ( ! empty( $client_sites ) ) {
-			foreach ( $client_sites as $cs ) {
-				$site_root = '';
-				if ( ! empty( $cs->wp_path ) && @is_dir( $cs->wp_path ) ) {
-					$real      = realpath( $cs->wp_path );
-					$site_root = $real ? $real : $cs->wp_path;
-				}
-
-				if ( ! empty( $site_root ) ) {
-					$site_root = rtrim( str_replace( '\\', '/', $site_root ), '/' );
-					// Remove the quarantine directories on the client site
-					$client_quarantines = array(
-						$site_root . '/wp-content/uploads/hkymalvexa-quarantine',
-					);
-					foreach ( $client_quarantines as $cq ) {
-						if ( is_dir( $cq ) ) {
-							hkymalvexa_uninstall_recursive_rmdir( $cq );
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// 2. Also wipe any quarantine vault, backup files, or temporary files from the host server
+	// 1. Wipe quarantine vault, backup files, and temporary files from the uploads directory
 	$upload_dir = wp_upload_dir();
 	if ( ! empty( $upload_dir['basedir'] ) ) {
 		$host_quarantines = array(
+			$upload_dir['basedir'] . '/hky-malvexa-quarantine',
 			$upload_dir['basedir'] . '/hkymalvexa-quarantine',
 		);
 		foreach ( $host_quarantines as $hq ) {
@@ -102,6 +75,7 @@ function hkymalvexa_uninstall_purge_site_data() {
 		}
 	}
 	$root_quarantines = array(
+		$host_root . '/wp-content/uploads/hky-malvexa-quarantine',
 		$host_root . '/wp-content/uploads/hkymalvexa-quarantine',
 	);
 	foreach ( $root_quarantines as $rq ) {
@@ -110,10 +84,10 @@ function hkymalvexa_uninstall_purge_site_data() {
 		}
 	}
 
-	// 3. Clear any registered scheduled cron tasks
+	// 2. Clear any registered scheduled cron tasks
 	wp_clear_scheduled_hook( 'hkymalvexa_scheduled_scan' );
 
-	// 4. Delete all options, settings, and transients from wp_options
+	// 3. Delete all options, settings, and transients from wp_options
 	$wpdb->query(
 		"DELETE FROM `{$wpdb->options}` 
 		WHERE option_name LIKE 'hkymalvexa_%' 
@@ -131,10 +105,9 @@ function hkymalvexa_uninstall_purge_site_data() {
 		);
 	}
 
-	// 5. Drop all custom database tables
+	// 4. Drop all custom database tables
 	$tables = array(
 		$wpdb->prefix . 'hkymalvexa_sites',
-		$wpdb->prefix . 'hkymalvexa_connections',
 		$wpdb->prefix . 'hkymalvexa_scans',
 		$wpdb->prefix . 'hkymalvexa_findings',
 		$wpdb->prefix . 'hkymalvexa_quarantine',

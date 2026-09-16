@@ -4,7 +4,7 @@
  * Protected by wp_verify_nonce and current_user_can('manage_options')
  */
 // phpcs:disable WordPress.Security.NonceVerification.Missing -- All AJAX endpoints strictly authenticated via check_ajax_referer and manage_options capability in hkymalvexa_verify_ajax_auth().
-// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom database tables used for hkymalvexa sites and connections.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom database tables used for hkymalvexa scans and findings.
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -20,9 +20,6 @@ function hkymalvexa_ajax_init() {
 	add_action( 'wp_ajax_hkymalvexa_repair_core', 'hkymalvexa_ajax_handle_repair_core' );
 	add_action( 'wp_ajax_hkymalvexa_verify_site', 'hkymalvexa_ajax_handle_verify_site' );
 	add_action( 'wp_ajax_hkymalvexa_view_code', 'hkymalvexa_ajax_handle_view_code' );
-	add_action( 'wp_ajax_hkymalvexa_save_site', 'hkymalvexa_ajax_handle_save_site' );
-	add_action( 'wp_ajax_hkymalvexa_delete_site', 'hkymalvexa_ajax_handle_delete_site' );
-	add_action( 'wp_ajax_hkymalvexa_register_local_site', 'hkymalvexa_ajax_handle_register_local_site' );
 }
 
 /**
@@ -287,103 +284,4 @@ function hkymalvexa_ajax_handle_view_code() {
 	);
 }
 
-/**
- * Save / Create Site
- */
-function hkymalvexa_ajax_handle_save_site() {
-	hkymalvexa_verify_ajax_auth();
-	global $wpdb;
 
-	$table_sites = hkymalvexa_get_table( 'sites' );
-
-	$name    = isset( $_POST['site_name'] ) ? sanitize_text_field( wp_unslash( $_POST['site_name'] ) ) : '';
-	$url     = isset( $_POST['site_url'] ) ? esc_url_raw( wp_unslash( $_POST['site_url'] ) ) : '';
-	$env     = isset( $_POST['environment'] ) ? sanitize_text_field( wp_unslash( $_POST['environment'] ) ) : 'production';
-	$mode    = isset( $_POST['access_mode'] ) ? sanitize_text_field( wp_unslash( $_POST['access_mode'] ) ) : 'sftp';
-	$wp_path = isset( $_POST['wp_path'] ) ? sanitize_text_field( wp_unslash( $_POST['wp_path'] ) ) : '';
-	$notes   = isset( $_POST['notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['notes'] ) ) : '';
-
-	if ( empty( $name ) || empty( $url ) ) {
-		wp_send_json_error( array( 'message' => 'Site Name and URL are required.' ) );
-	}
-
-	$wpdb->insert(
-		$table_sites,
-		array(
-			'name'          => $name,
-			'url'           => $url,
-			'environment'   => $env,
-			'access_mode'   => $mode,
-			'wp_path'       => $wp_path,
-			'health_status' => 'healthy',
-			'notes'         => $notes,
-			'created_at'    => current_time( 'mysql' ),
-		)
-	);
-
-	$site_id = $wpdb->insert_id;
-
-	// Save SFTP connection credentials if provided
-	if ( $mode === 'sftp' && ! empty( $_POST['sftp_host'] ) ) {
-		$table_conn = hkymalvexa_get_table( 'connections' );
-		$host = isset( $_POST['sftp_host'] ) ? sanitize_text_field( wp_unslash( $_POST['sftp_host'] ) ) : '';
-		$port = isset( $_POST['sftp_port'] ) ? (int) $_POST['sftp_port'] : 22;
-		$user = isset( $_POST['sftp_user'] ) ? sanitize_text_field( wp_unslash( $_POST['sftp_user'] ) ) : '';
-		$pass = isset( $_POST['sftp_pass'] ) ? sanitize_text_field( wp_unslash( $_POST['sftp_pass'] ) ) : '';
-		$path = isset( $_POST['sftp_path'] ) ? sanitize_text_field( wp_unslash( $_POST['sftp_path'] ) ) : '/';
-
-		$wpdb->insert(
-			$table_conn,
-			array(
-				'site_id'            => $site_id,
-				'connection_type'    => 'sftp',
-				'host'               => $host,
-				'port'               => $port,
-				'username'           => $user,
-				'encrypted_password' => hkymalvexa_encrypt( $pass ),
-				'remote_path'        => $path,
-				'created_at'         => current_time( 'mysql' ),
-			)
-		);
-	}
-
-	hkymalvexa_log_audit( $site_id, 'add_site', $name, "Added new managed site: {$name} ({$url})" );
-
-	wp_send_json_success( array( 'message' => 'Site added successfully!', 'site_id' => $site_id ) );
-}
-
-/**
- * 1-Click Register Local Hosted Site
- */
-function hkymalvexa_ajax_handle_register_local_site() {
-	hkymalvexa_verify_ajax_auth();
-
-	$res = hkymalvexa_register_local_site();
-	if ( is_wp_error( $res ) ) {
-		wp_send_json_error( array( 'message' => $res->get_error_message() ) );
-	}
-
-	wp_send_json_success( array(
-		'message' => 'This website has been registered as your target scan site!',
-		'site_id' => $res,
-	) );
-}
-
-/**
- * Delete Site
- */
-function hkymalvexa_ajax_handle_delete_site() {
-	hkymalvexa_verify_ajax_auth();
-
-	$site_id = isset( $_POST['site_id'] ) ? (int) $_POST['site_id'] : 0;
-	if ( $site_id <= 0 ) {
-		wp_send_json_error( array( 'message' => 'Invalid site ID.' ) );
-	}
-
-	$ok = hkymalvexa_delete_site( $site_id );
-	if ( ! $ok ) {
-		wp_send_json_error( array( 'message' => 'Site could not be found or deleted.' ) );
-	}
-
-	wp_send_json_success( array( 'message' => 'Site removed successfully.' ) );
-}

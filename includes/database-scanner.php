@@ -9,83 +9,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Connect to target site database using its wp-config.php credentials
+ * Get target site database (global $wpdb)
  *
  * @param int $site_id
- * @return wpdb Instance of wpdb connected to the target database (or global $wpdb as fallback)
+ * @return wpdb Global WordPress database object
  */
 function hkymalvexa_get_target_db( $site_id = 0 ) {
 	global $wpdb;
-
-	if ( empty( $site_id ) || (int) $site_id <= 0 ) {
-		return $wpdb;
-	}
-
-	$site_root = hkymalvexa_get_site_root( $site_id );
-	if ( empty( $site_root ) || ! is_dir( $site_root ) ) {
-		return $wpdb;
-	}
-
-	// Locate wp-config.php in target site root or one directory above
-	$config_file = '';
-	if ( file_exists( $site_root . '/wp-config.php' ) ) {
-		$config_file = $site_root . '/wp-config.php';
-	} elseif ( file_exists( dirname( $site_root ) . '/wp-config.php' ) ) {
-		$config_file = dirname( $site_root ) . '/wp-config.php';
-	}
-
-	if ( ! $config_file || ! is_readable( $config_file ) ) {
-		return $wpdb;
-	}
-
-	$config_content = @file_get_contents( $config_file );
-	if ( empty( $config_content ) ) {
-		return $wpdb;
-	}
-
-	// Parse database credentials and table prefix from target wp-config.php
-	$db_name = '';
-	$db_user = '';
-	$db_password = '';
-	$db_host = 'localhost';
-	$table_prefix = 'wp_';
-
-	if ( preg_match( "/define\s*\(\s*['\"]DB_NAME['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $config_content, $m ) ) {
-		$db_name = trim( $m[1] );
-	}
-	if ( preg_match( "/define\s*\(\s*['\"]DB_USER['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $config_content, $m ) ) {
-		$db_user = trim( $m[1] );
-	}
-	if ( preg_match( "/define\s*\(\s*['\"]DB_PASSWORD['\"]\s*,\s*['\"](.*?)['\"]\s*\)/is", $config_content, $m ) ) {
-		$db_password = $m[1];
-	}
-	if ( preg_match( "/define\s*\(\s*['\"]DB_HOST['\"]\s*,\s*['\"]([^'\"]+)['\"]\s*\)/i", $config_content, $m ) ) {
-		$db_host = trim( $m[1] );
-	}
-	if ( preg_match( "/\\\$table_prefix\s*=\s*['\"]([^'\"]+)['\"]/i", $config_content, $m ) ) {
-		$table_prefix = trim( $m[1] );
-	}
-
-	if ( empty( $db_name ) || empty( $db_user ) ) {
-		return $wpdb;
-	}
-
-	// If target database and prefix are completely identical to host site, use global $wpdb
-	if ( defined( 'DB_NAME' ) && $db_name === DB_NAME && defined( 'DB_USER' ) && $db_user === DB_USER && $table_prefix === $wpdb->prefix ) {
-		return $wpdb;
-	}
-
-	// Instantiate separate wpdb connection for the target site
-	try {
-		$target_db = new wpdb( $db_user, $db_password, $db_name, $db_host );
-		$target_db->set_prefix( $table_prefix );
-		if ( ! empty( $target_db->error ) && empty( $target_db->dbh ) ) {
-			return $wpdb;
-		}
-		return $target_db;
-	} catch ( Exception $e ) {
-		return $wpdb;
-	}
+	return $wpdb;
 }
 
 /**

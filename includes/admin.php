@@ -124,15 +124,6 @@ function hkymalvexa_render_dashboard() {
 	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/dashboard.php';
 }
 
-function hkymalvexa_render_sites() {
-	wp_safe_redirect( admin_url( 'admin.php?page=hkymalvexa-findings' ) );
-	exit;
-}
-
-function hkymalvexa_render_scan_center() {
-	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/scan-center.php';
-}
-
 function hkymalvexa_render_findings() {
 	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/findings.php';
 }
