@@ -301,11 +301,18 @@ function hkymalvexa_restore_file( $quarantine_id ) {
 		return new WP_Error( 'invalid_path', 'Invalid or prohibited restore destination.' );
 	}
 
-	$site_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
+	$site_root = function_exists( 'hkymalvexa_get_site_root' ) 
+		? hkymalvexa_get_site_root( $item->site_id ) 
+		: rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 	$dest      = $site_root . '/' . ltrim( $item->original_path, '/\\' );
 
 	if ( strpos( $dest, $site_root . '/' ) !== 0 ) {
 		return new WP_Error( 'path_escape', 'Restore path escape detected.' );
+	}
+
+	// Reject restore to a symbolic link
+	if ( is_link( $dest ) ) {
+		return new WP_Error( 'symlink_rejected', 'Cannot restore onto a symbolic link.' );
 	}
 
 	$dest_dir = dirname( $dest );
@@ -313,6 +320,7 @@ function hkymalvexa_restore_file( $quarantine_id ) {
 		wp_mkdir_p( $dest_dir );
 	}
 
+	// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.ABSPATHDetected -- Legitimate restoration of quarantined file back to its original site location.
 	if ( ! @copy( $quarantine_path, $dest ) ) {
 		return new WP_Error( 'restore_failed', 'Failed to copy file back to original location.' );
 	}
@@ -932,6 +940,7 @@ function hkymalvexa_clean_file_injection( $finding_id ) {
 	}
 
 	// 5. Write sanitized content to file
+	// phpcs:ignore PluginCheck.CodeAnalysis.WriteFile.ABSPATHDetected -- Legitimate surgical cleaning of injected malware code from site file.
 	if ( false === @file_put_contents( $full_path, $new_content ) ) {
 		return new WP_Error( 'write_failed', 'Could not write cleaned file to disk.' );
 	}
