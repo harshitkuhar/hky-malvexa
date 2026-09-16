@@ -28,8 +28,8 @@ $logs = $wpdb->get_results(
 
 	<div class="hkymalvexa-header">
 		<div class="hkymalvexa-title-area">
-			<h1><span class="dashicons dashicons-list-view"></span> Incident & Audit Log Trail</h1>
-			<p>Immutable audit trail of all diagnostic scans, threat quarantines, core restorations, and operator actions.</p>
+			<h1><span class="dashicons dashicons-list-view"></span> Local Incident & Audit Log</h1>
+			<p>Local audit log of diagnostic scans, threat quarantines, core restorations, and remediation actions.</p>
 		</div>
 	</div>
 
@@ -39,7 +39,7 @@ $logs = $wpdb->get_results(
 				<div style="padding: 50px 20px; text-align: center; color: var(--wpd-text-muted);">
 					<span class="dashicons dashicons-clipboard" style="font-size: 46px; width: 46px; height: 46px; color: var(--wpd-primary); margin-bottom: 12px;"></span>
 					<h3 style="color: var(--wpd-text-main); margin: 0 0 6px 0;">No Audit Events Recorded</h3>
-					<p style="margin: 0; font-size: 13px;">Actions will be permanently logged here as you run scans, quarantine files, or repair items.</p>
+					<p style="margin: 0; font-size: 13px;">Actions are recorded locally here as you run scans, quarantine files, or repair items.</p>
 				</div>
 			<?php else : ?>
 				<table class="wpd-table">

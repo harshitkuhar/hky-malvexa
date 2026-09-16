@@ -37,25 +37,71 @@ function hkymalvexa_repair_core_file( $relative_path, $version = '', $site_id = 
 		return new WP_Error( 'content_dir_rejected', __( 'Core repair cannot modify files in wp-content directory.', 'hky-malvexa' ) );
 	}
 
-	// 4. Must be a legitimate core file (CORE classification)
+	// 4. Must be a recognized core file classification
 	if ( function_exists( 'hkymalvexa_classify_file' ) && hkymalvexa_classify_file( $norm_path ) !== 'CORE' ) {
 		return new WP_Error( 'not_core_file', __( 'The target file is not a recognized WordPress core file.', 'hky-malvexa' ) );
 	}
 
-	// 5. Must exist in the official WordPress core checksums for this release
-	if ( function_exists( 'hkymalvexa_get_core_checksums' ) ) {
-		$checksums = hkymalvexa_get_core_checksums( $version );
-		if ( ! empty( $checksums ) && ! isset( $checksums[ $norm_path ] ) ) {
-			return new WP_Error( 'not_official_core', __( 'The target file is not listed in the official WordPress release checksums.', 'hky-malvexa' ) );
-		}
+	// 5. Must fail closed if official checksums cannot be verified (Fix 1)
+	if ( ! function_exists( 'hkymalvexa_get_core_checksums' ) ) {
+		return new WP_Error(
+			'checksum_unavailable',
+			__( 'Official WordPress core checksums could not be verified. Core repair has been stopped.', 'hky-malvexa' )
+		);
 	}
 
-	// 6. Resolve absolute path and guarantee it is strictly inside ABSPATH
+	$checksums = hkymalvexa_get_core_checksums( $version );
+	if ( empty( $checksums ) || ! is_array( $checksums ) ) {
+		return new WP_Error(
+			'checksum_unavailable',
+			__( 'Official WordPress core checksums could not be verified. Core repair has been stopped.', 'hky-malvexa' )
+		);
+	}
+
+	if ( ! isset( $checksums[ $norm_path ] ) ) {
+		return new WP_Error(
+			'not_official_core',
+			__( 'The target file is not listed in the official WordPress release checksums.', 'hky-malvexa' )
+		);
+	}
+
+	// 6. Resolve absolute path and enforce strict containment inside ABSPATH (Fix 2)
 	$site_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 	$full_path = $site_root . '/' . $norm_path;
 
 	if ( strpos( $full_path, $site_root . '/' ) !== 0 ) {
 		return new WP_Error( 'path_escape', __( 'Path escape detected.', 'hky-malvexa' ) );
+	}
+
+	// Reject symbolic links explicitly to prevent symlink escape
+	if ( is_link( $full_path ) ) {
+		return new WP_Error(
+			'symlink_rejected',
+			__( 'Core repair cannot modify a symbolic link.', 'hky-malvexa' )
+		);
+	}
+
+	// Validate target directory and canonical path
+	$dest_dir = dirname( $full_path );
+	if ( is_link( $dest_dir ) ) {
+		return new WP_Error(
+			'symlink_rejected',
+			__( 'Core repair cannot modify files inside a symbolic link directory.', 'hky-malvexa' )
+		);
+	}
+
+	if ( file_exists( $dest_dir ) ) {
+		$real_dest_dir = str_replace( '\\', '/', realpath( $dest_dir ) );
+		if ( $real_dest_dir !== $site_root && strpos( $real_dest_dir, $site_root . '/' ) !== 0 ) {
+			return new WP_Error( 'symlink_escape', __( 'Directory resolves outside of WordPress root.', 'hky-malvexa' ) );
+		}
+	}
+
+	if ( file_exists( $full_path ) ) {
+		$real_full_path = str_replace( '\\', '/', realpath( $full_path ) );
+		if ( strpos( $real_full_path, $site_root . '/' ) !== 0 ) {
+			return new WP_Error( 'symlink_escape', __( 'File resolves outside of WordPress root.', 'hky-malvexa' ) );
+		}
 	}
 
 	// 7. Create safety backup in quarantine vault first
@@ -80,7 +126,15 @@ function hkymalvexa_repair_core_file( $relative_path, $version = '', $site_id = 
 		return new WP_Error( 'empty_content', __( 'Downloaded official content is empty.', 'hky-malvexa' ) );
 	}
 
-	$dest_dir = dirname( $full_path );
+	// Verify downloaded content hash matches official checksum
+	$expected_hash = $checksums[ $norm_path ];
+	if ( md5( $clean_content ) !== $expected_hash ) {
+		return new WP_Error(
+			'checksum_mismatch',
+			__( 'Downloaded file checksum does not match official WordPress release checksum.', 'hky-malvexa' )
+		);
+	}
+
 	if ( ! is_dir( $dest_dir ) ) {
 		wp_mkdir_p( $dest_dir );
 	}

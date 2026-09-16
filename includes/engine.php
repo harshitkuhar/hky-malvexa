@@ -374,12 +374,15 @@ function hkymalvexa_catalog_files( $base_dir ) {
 	try {
 		$dir_iterator = new RecursiveDirectoryIterator(
 			$base_dir,
-			FilesystemIterator::SKIP_DOTS | FilesystemIterator::FOLLOW_SYMLINKS
+			FilesystemIterator::SKIP_DOTS
 		);
 		$iterator = new RecursiveIteratorIterator( $dir_iterator, RecursiveIteratorIterator::SELF_FIRST );
 
 		foreach ( $iterator as $item ) {
 			try {
+				if ( $item->isLink() ) {
+					continue;
+				}
 				if ( $item->isFile() ) {
 					$path = str_replace( '\\', '/', $item->getPathname() );
 					if ( strpos( $path, 'hky-malvexa-quarantine' ) !== false || strpos( $path, 'hkymalvexa-quarantine' ) !== false || strpos( $path, 'hky-malvexa' ) !== false || strpos( $path, 'hkymalvexa' ) !== false || strpos( $path, '.git' ) !== false ) {

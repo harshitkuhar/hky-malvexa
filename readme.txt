@@ -9,44 +9,44 @@ Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity repair, and isolated quarantine vault with 1-click rollback.
+WordPress malware scanner, blackhat SEO & casino spam cleaner, core integrity repair, and isolated quarantine vault with 1-click rollback.
 
 == Description ==
 
-**HKY MalVexa** is a professional-grade WordPress security platform designed for emergency diagnosis, malware investigation, surgical threat neutralization, and recovery.
+**HKY MalVexa** is a WordPress security plugin designed for diagnosis, malware investigation, threat neutralization, and recovery.
 
-Unlike generic security plugins that overwhelm your dashboard with complex configuration settings or lock you out of your own site, HKY MalVexa focuses on **surgical threat detection and immediate recovery**:
+HKY MalVexa provides practical threat detection, spam removal, and recovery tools:
 
-* **Zero-Timeout Batched Scanning**: Process large file structures and heavy databases without server timeouts, memory exhaustion, or 504 Gateway errors.
+* **Chunked Batched Scanning**: Uses chunked and batched requests to reduce memory consumption and help avoid common PHP execution timeouts and gateway errors on large file systems or databases.
 * **Blackhat SEO & Casino Spam Cleaner**: Detects and cleans hidden Japanese keywords, casino/gambling redirects, cloaked spam links, and obfuscated iframes from post contents and Elementor/Gutenberg metadata without corrupting page layouts.
-* **Surgical Code Neutralization**: Neutralizes backdoors, web shells (FilesMan, WSO, b374k), and eval-injected PHP headers safely while leaving legitimate theme and plugin files operational.
-* **Isolated Quarantine Storage Vault**: When a threat is quarantined or cleaned, a secure timestamped safety backup is created in a protected storage vault (`.htaccess` blocked) with 1-click instant file and database rollback.
-* **WordPress Core Integrity Verification**: Checksums your core files against official WordPress.org cryptographic hashes and provides 1-click core repair to replace altered files with pristine originals directly from the official WordPress repository.
-* **Immutable Incident & Audit Trail**: Every scan execution, threat quarantine, core restore, and operator action is recorded in a tamper-resistant local audit log.
+* **Targeted Code Cleaning**: Safely removes recognized backdoors, web shells (FilesMan, WSO, b374k), and eval-injected PHP headers while preserving legitimate theme and plugin files.
+* **Isolated Quarantine Storage Vault**: When a threat is quarantined or cleaned, a safety backup is created in a protected storage vault (`.htaccess` blocked) with 1-click file and database rollback.
+* **WordPress Core Integrity Verification**: Compares core files against official WordPress.org cryptographic checksums and provides 1-click core repair to replace altered or missing files directly from the official WordPress SVN repository.
+* **Local Incident & Audit Log**: Scan executions, quarantine actions, core restorations, and remediation events are recorded in a local database log for diagnostic tracking.
 
 ### Key Features
 
 1. **Integrated Emergency Scanner**:
-   - Full Deep Scan: Comprehensive multi-stage examination across all core files, themes, plugins, uploads, drop-ins, and database records.
-   - Zero-Timeout Architecture: Chunked batched execution designed to prevent memory exhaustion and 504 gateway timeouts on any hosting environment.
+   - Full Deep Scan: Comprehensive multi-stage examination across core files, themes, plugins, uploads, drop-ins, and database records.
+   - Chunked Execution: Batched execution designed to help reduce memory usage and prevent server timeouts during large scans.
 2. **Interactive Threat Inspector**:
    - Live code preview box showing exact line numbers and malicious syntax highlighted.
-   - 1-click action buttons: "Clean the File", "Quarantine File", "Repair from WordPress.org", or "Clean Spam from Page".
+   - Action buttons: "Clean the File", "Quarantine File", "Repair from WordPress.org", or "Clean Spam from Page".
 3. **Database Spam Detection**:
    - Scans `wp_posts` for cloaked links and off-screen negative-margin spam text.
    - Scans `wp_options` and `wpcode` database snippets for rogue script tags and base64 payloads.
    - Scans `wp_users` for stealth rogue administrator accounts.
 4. **Isolated Vault & 1-Click Rollback**:
    - Quarantined files are moved into a protected quarantine directory inside the WordPress uploads directory (`wp-content/uploads/hky-malvexa-quarantine/`). Direct web access is denied and PHP script execution is disabled.
-   - 1-click restore instantly writes the pristine backup back to disk or recovers the original post content.
-5. **Tamper-Resistant Incident & Audit Trail**:
-   - Immutable audit logging of every scan execution, quarantined threat, core replacement, and remediation action.
-   - 100% self-hosted local audit trail for security compliance and post-incident investigation.
+   - 1-click restore writes the backup back to disk or recovers the original post content.
+5. **Local Incident & Audit Log**:
+   - Local audit logging of scan executions, quarantined threats, core replacements, and remediation actions.
+   - Stored in the local WordPress database for security diagnostics and post-incident investigation.
 
 ### Privacy & Data Ownership Policy
 
-* **100% Self-Hosted & Local**: HKY MalVexa runs entirely on your own WordPress hosting server.
-* **Zero External Data Transmission**: We do not collect, transmit, or store any of your website files, database records, scan results, or user credentials on external servers.
+* **Local Processing & Storage**: Processing and scan data are kept on your WordPress server. The plugin only connects to official WordPress.org services when performing core integrity verification or core repair.
+* **No Telemetry or Tracking**: We do not collect, transmit, or store any of your website files, database records, scan results, or user credentials on third-party servers.
 * **Full Data Ownership**: All quarantine vaults, safety backups, and incident logs remain strictly on your own server and protected WordPress uploads directory.
 
 == External Services ==
@@ -80,32 +80,37 @@ No. HKY MalVexa never modifies or deletes any file without your explicit action.
 Yes. Navigate to **HKY MalVexa > Quarantine Vault** or the **Scan & Findings** screen. Any quarantined file or cleaned database snippet can be restored to its exact original location with a single click.
 
 = How does the Blackhat SEO spam cleaner work? =
-Attackers often inject spam links, hidden gambling keywords (e.g. slot88, casino, sbobet), or hidden off-screen divs (`position:absolute;left:-9999px`) into your post contents or Elementor data. HKY MalVexa surgically strips out the malicious markup and restores your original content without breaking your page layout or styling.
+Attackers often inject spam links, hidden gambling keywords (e.g. slot88, casino, sbobet), or hidden off-screen divs (`position:absolute;left:-9999px`) into your post contents or Elementor data. HKY MalVexa safely strips out the malicious markup and restores your original content without breaking your page layout or styling.
 
 = What is Core Integrity Repair? =
 HKY MalVexa downloads official cryptographic checksums from the WordPress.org API for your exact WordPress version. If any core file (e.g. `wp-login.php`, `wp-settings.php`, `wp-includes/`) has been modified by malware, you can replace it with a pristine official copy from WordPress.org with one click.
 
-= Does HKY MalVexa connect to external cloud services? =
-HKY MalVexa is 100% self-hosted and fully operational standalone on your server. It does not phone home, track usage, or send your website data to any third-party server. The only external network connections are to official WordPress.org services (api.wordpress.org to verify core file checksums, and core.svn.wordpress.org if you choose to repair an altered core file with an official copy).
+= Does HKY MalVexa connect to external services? =
+Processing and scan data are kept on your WordPress server. The plugin does not phone home, track usage, or send your website data to third-party servers. The only external network connections are to official WordPress.org services (api.wordpress.org to verify core file checksums, and core.svn.wordpress.org if you choose to repair an altered core file with an official copy).
 
 = Where is scan data and database info stored? =
-We do not store your files, scan results, or database information on any external servers. Everything is processed and stored strictly on your own local hosting server.
+We do not store your files, scan results, or database information on external servers. Everything is processed and stored locally on your own WordPress hosting server.
 
 == Screenshots ==
 
-1. **Dashboard & Threat Overview**: Real-time health metrics, active threat counts, and quick scanner launcher.
-2. **Scan Center & Live Execution**: Zero-timeout batched scanner with live terminal logs and progress tracking.
-3. **Threat Findings & Evidence**: Detailed catalog of detected malware, backdoors, and SEO spam with severity badges.
+1. **Dashboard & Threat Overview**: Health metrics, active threat counts, and quick scanner launcher.
+2. **Scan Center & Live Execution**: Batched scanner with live terminal logs and progress tracking.
+3. **Threat Findings & Evidence**: Catalog of detected malware, backdoors, and SEO spam with severity badges.
 4. **Interactive Code Inspector**: Preview infected code with exact line markers and 1-click remediation actions.
 5. **Quarantine Storage Vault**: Isolated, `.htaccess`-protected storage vault with 1-click rollback.
-6. **Incident & Audit Trail**: Immutable log of all scan diagnostics, threat quarantines, and core restorations.
+6. **Local Incident & Audit Log**: Local audit log of scan diagnostics, threat quarantines, and core restorations.
 
 == Changelog ==
 
 = 1.0.0 =
 * Initial public release on WordPress.org.
-* Zero-timeout chunked batched file and database scanning engine.
-* Blackhat SEO and casino spam surgical extraction pipeline.
+* Chunked batched file and database scanning engine.
+* Blackhat SEO and casino spam extraction pipeline.
 * Official WordPress.org core checksum comparison and 1-click file repair.
 * Isolated quarantine storage vault with 1-click rollback.
-* Tamper-resistant incident audit log.
+* Local incident and diagnostic audit log.
+
+== Upgrade Notice ==
+
+= 1.0.0 =
+Initial release of HKY MalVexa.

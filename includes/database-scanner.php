@@ -2,7 +2,7 @@
 /**
  * HKY MalVexa Procedural Database Forensics Scanner
  * Inspects WPCode snippets, wp_options, wp_users, and wp_posts for injected payloads & rogue admins
- * Connects directly to the target site's database via target wp-config.php credentials
+ * Connects directly to the WordPress database ($wpdb) to inspect records
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
