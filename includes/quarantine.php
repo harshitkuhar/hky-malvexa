@@ -33,6 +33,11 @@ function hkymalvexa_quarantine_file( $finding_id ) {
 		}
 	}
 
+	// Path traversal protection
+	if ( strpos( $rel_path, '..' ) !== false || strpos( $rel_path, "\0" ) !== false ) {
+		return new WP_Error( 'invalid_path', 'Invalid or prohibited file path.' );
+	}
+
 	// 1. Support quarantining database threats (posts, options, snippets)
 	if ( strpos( $rel_path, 'database:' ) === 0 || $finding->category === 'wpcode_snippet' || $finding->category === 'db_option_injection' ) {
 		$target_db = hkymalvexa_get_target_db( $finding->site_id );
@@ -291,7 +296,18 @@ function hkymalvexa_restore_file( $quarantine_id ) {
 		);
 	}
 
-	$dest = hkymalvexa_get_site_root( $item->site_id ) . '/' . ltrim( $item->original_path, '/\\' );
+	// Path traversal protection on restore
+	if ( strpos( $item->original_path, '..' ) !== false || strpos( $item->original_path, "\0" ) !== false ) {
+		return new WP_Error( 'invalid_path', 'Invalid or prohibited restore destination.' );
+	}
+
+	$site_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
+	$dest      = $site_root . '/' . ltrim( $item->original_path, '/\\' );
+
+	if ( strpos( $dest, $site_root . '/' ) !== 0 ) {
+		return new WP_Error( 'path_escape', 'Restore path escape detected.' );
+	}
+
 	$dest_dir = dirname( $dest );
 	if ( ! is_dir( $dest_dir ) ) {
 		wp_mkdir_p( $dest_dir );

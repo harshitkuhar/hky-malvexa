@@ -37,7 +37,7 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
    - Scans `wp_options` and `wpcode` database snippets for rogue script tags and base64 payloads.
    - Scans `wp_users` for stealth rogue administrator accounts.
 4. **Isolated Vault & 1-Click Rollback**:
-   - Quarantined files are neutralized and moved outside the public web root with PHP execution disabled.
+   - Quarantined files are moved into a protected quarantine directory inside the WordPress uploads directory (`wp-content/uploads/hky-malvexa-quarantine/`). Direct web access is denied and PHP script execution is disabled.
    - 1-click restore instantly writes the pristine backup back to disk or recovers the original post content.
 5. **Tamper-Resistant Incident & Audit Trail**:
    - Immutable audit logging of every scan execution, quarantined threat, core replacement, and remediation action.
