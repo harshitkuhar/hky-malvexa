@@ -27,8 +27,8 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
 ### Key Features
 
 1. **Integrated Emergency Scanner**:
-   - Quick Scan: Rapidly inspects active plugins, theme headers, wp-config.php, index.php, and database options.
-   - Deep Scan: Comprehensive multi-stage file and database examination across all folders, uploads, and posts.
+   - Full Deep Scan: Comprehensive multi-stage examination across all core files, themes, plugins, uploads, drop-ins, and database records.
+   - Zero-Timeout Architecture: Chunked batched execution designed to prevent memory exhaustion and 504 gateway timeouts on any hosting environment.
 2. **Interactive Threat Inspector**:
    - Live code preview box showing exact line numbers and malicious syntax highlighted.
    - 1-click action buttons: "Clean the File", "Quarantine File", "Repair from WordPress.org", or "Clean Spam from Page".
@@ -86,7 +86,7 @@ Attackers often inject spam links, hidden gambling keywords (e.g. slot88, casino
 HKY MalVexa downloads official cryptographic checksums from the WordPress.org API for your exact WordPress version. If any core file (e.g. `wp-login.php`, `wp-settings.php`, `wp-includes/`) has been modified by malware, you can replace it with a pristine official copy from WordPress.org with one click.
 
 = Does HKY MalVexa connect to external cloud services? =
-HKY MalVexa is 100% self-hosted and fully operational standalone on your server. It does not phone home, track usage, or send your website data to any third-party server. The only external network call is to the official WordPress.org API (api.wordpress.org) during core integrity scans to fetch official file checksums for your WordPress version.
+HKY MalVexa is 100% self-hosted and fully operational standalone on your server. It does not phone home, track usage, or send your website data to any third-party server. The only external network connections are to official WordPress.org services (api.wordpress.org to verify core file checksums, and core.svn.wordpress.org if you choose to repair an altered core file with an official copy).
 
 = Where is scan data and database info stored? =
 We do not store your files, scan results, or database information on any external servers. Everything is processed and stored strictly on your own local hosting server.
