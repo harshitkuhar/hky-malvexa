@@ -1,13 +1,13 @@
 <?php
 /**
- * SiteCure Procedural File Classifier
+ * HKY MalVexa Procedural File Classifier
  * Classifies files as CORE, PLUGIN, THEME, UPLOAD, CONFIG, CUSTOM or UNKNOWN
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function sitecure_classify_file( $relative_path ) {
+function hkymalvexa_classify_file( $relative_path ) {
 	$norm_path = str_replace( '\\', '/', ltrim( $relative_path, '/\\' ) );
 
 	// Config files

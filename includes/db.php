@@ -1,9 +1,9 @@
 <?php
 /**
- * SiteCure Procedural Database Handler
+ * HKY MalVexa Procedural Database Handler
  * Dedicated custom tables using $wpdb
  */
-// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dedicated custom database tables for SiteCure scans, findings, quarantine, and audit logs.
+// phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Dedicated custom database tables for HKY MalVexa scans, findings, quarantine, and audit logs.
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
@@ -12,27 +12,41 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Get table name with prefix
  */
-function sitecure_get_table( $name ) {
+function hkymalvexa_get_table( $name ) {
 	global $wpdb;
-	return $wpdb->prefix . 'sitecure_' . $name;
+	return $wpdb->prefix . 'hkymalvexa_' . $name;
 }
 
-function sitecure_maybe_install_tables() {
+function hkymalvexa_maybe_install_tables() {
 	global $wpdb;
-	$table_sites = sitecure_get_table( 'sites' );
+	$table_sites = hkymalvexa_get_table( 'sites' );
 	if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_sites'" ) !== $table_sites ) {
-		sitecure_install_database_tables();
+		hkymalvexa_install_database_tables();
 	} else {
-		// Ensure current site always reflects SiteCure
-		$wpdb->query( "UPDATE $table_sites SET name = 'SiteCure (Current Site)' WHERE access_mode = 'local'" );
+		// Ensure current site always reflects current site name and URL
+		$site = $wpdb->get_row( "SELECT * FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
+		if ( ! $site ) {
+			$wpdb->insert(
+				$table_sites,
+				array(
+					'name'          => get_bloginfo( 'name' ) ? get_bloginfo( 'name' ) : 'This WordPress Site',
+					'url'           => home_url(),
+					'environment'   => 'production',
+					'access_mode'   => 'local',
+					'wp_path'       => ABSPATH,
+					'health_status' => 'healthy',
+					'created_at'    => current_time( 'mysql' ),
+				)
+			);
+		}
 	}
 }
-add_action( 'admin_init', 'sitecure_maybe_install_tables' );
+add_action( 'admin_init', 'hkymalvexa_maybe_install_tables' );
 
 /**
  * Install or upgrade custom tables
  */
-function sitecure_install_database_tables() {
+function hkymalvexa_install_database_tables() {
 	global $wpdb;
 	$charset_collate = $wpdb->get_charset_collate();
 
@@ -41,7 +55,7 @@ function sitecure_install_database_tables() {
 	}
 
 	// 1. Sites Table
-	$table_sites = sitecure_get_table( 'sites' );
+	$table_sites = hkymalvexa_get_table( 'sites' );
 	$sql_sites = "CREATE TABLE $table_sites (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		name varchar(191) NOT NULL,
@@ -58,11 +72,25 @@ function sitecure_install_database_tables() {
 	) $charset_collate;";
 	dbDelta( $sql_sites );
 
-	// Cleanup: Do NOT add or retain current host site in Managed Sites
-	$wpdb->query( "DELETE FROM $table_sites WHERE access_mode = 'local'" );
+	// Ensure local hosted site exists in Sites table
+	$local_exists = $wpdb->get_var( "SELECT id FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
+	if ( ! $local_exists ) {
+		$wpdb->insert(
+			$table_sites,
+			array(
+				'name'          => get_bloginfo( 'name' ) ? get_bloginfo( 'name' ) : 'This WordPress Site',
+				'url'           => home_url(),
+				'environment'   => 'production',
+				'access_mode'   => 'local',
+				'wp_path'       => ABSPATH,
+				'health_status' => 'healthy',
+				'created_at'    => current_time( 'mysql' ),
+			)
+		);
+	}
 
 	// 2. Connections Table (Encrypted Credentials)
-	$table_connections = sitecure_get_table( 'connections' );
+	$table_connections = hkymalvexa_get_table( 'connections' );
 	$sql_connections = "CREATE TABLE $table_connections (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned NOT NULL,
@@ -80,7 +108,7 @@ function sitecure_install_database_tables() {
 	dbDelta( $sql_connections );
 
 	// 3. Scans Table
-	$table_scans = sitecure_get_table( 'scans' );
+	$table_scans = hkymalvexa_get_table( 'scans' );
 	$sql_scans = "CREATE TABLE $table_scans (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned NOT NULL,
@@ -100,7 +128,7 @@ function sitecure_install_database_tables() {
 	dbDelta( $sql_scans );
 
 	// 4. Findings Table
-	$table_findings = sitecure_get_table( 'findings' );
+	$table_findings = hkymalvexa_get_table( 'findings' );
 	$sql_findings = "CREATE TABLE $table_findings (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		scan_id bigint(20) unsigned NOT NULL,
@@ -124,7 +152,7 @@ function sitecure_install_database_tables() {
 	dbDelta( $sql_findings );
 
 	// 5. Quarantine Table
-	$table_quarantine = sitecure_get_table( 'quarantine' );
+	$table_quarantine = hkymalvexa_get_table( 'quarantine' );
 	$sql_quarantine = "CREATE TABLE $table_quarantine (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		finding_id bigint(20) unsigned DEFAULT NULL,
@@ -144,7 +172,7 @@ function sitecure_install_database_tables() {
 	dbDelta( $sql_quarantine );
 
 	// 6. Audit Logs Table
-	$table_audit = sitecure_get_table( 'audit_logs' );
+	$table_audit = hkymalvexa_get_table( 'audit_logs' );
 	$sql_audit = "CREATE TABLE $table_audit (
 		id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 		site_id bigint(20) unsigned DEFAULT 0,
@@ -167,27 +195,17 @@ function sitecure_install_database_tables() {
  * @param string $subdir Optional subdirectory ('cleaned_backups', 'vault', 'backups')
  * @return string Full filesystem path to the directory on the client site
  */
-function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
-	if ( ! empty( $site_id ) && (int) $site_id > 0 ) {
-		$site_root = sitecure_get_site_root( $site_id );
+function hkymalvexa_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
+	if ( empty( $site_id ) || (int) $site_id === 1 ) {
+		$upload = wp_upload_dir();
+		$quarantine_dir = $upload['basedir'] . '/hky-malvexa-quarantine';
 	} else {
-		// If no site_id, check if local site is registered before touching host uploads
-		global $wpdb;
-		$table_sites = sitecure_get_table( 'sites' );
-		$has_local = $wpdb->get_var( "SELECT id FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
-		if ( $has_local ) {
-			$site_root = ABSPATH;
-		} else {
+		$site_root = hkymalvexa_get_site_root( $site_id );
+		if ( empty( $site_root ) ) {
 			return '';
 		}
+		$quarantine_dir = $site_root . '/wp-content/uploads/hky-malvexa-quarantine';
 	}
-
-	$site_root = rtrim( str_replace( '\\', '/', $site_root ), '/' );
-	if ( empty( $site_root ) ) {
-		return '';
-	}
-
-	$quarantine_dir = $site_root . '/wp-content/uploads/sitecure-quarantine';
 
 	if ( ! is_dir( $quarantine_dir ) ) {
 		wp_mkdir_p( $quarantine_dir );
@@ -196,12 +214,22 @@ function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 	// Write .htaccess to prevent script execution completely
 	$htaccess_file = $quarantine_dir . '/.htaccess';
 	if ( ! file_exists( $htaccess_file ) ) {
-		$htaccess_content = "# SiteCure Secure Storage Vault\n" .
-			"Order Deny,Allow\n" .
-			"Deny from all\n" .
-			"<FilesMatch \".*\">\n" .
+		$htaccess_content = "# HKY MalVexa Secure Storage Vault\n" .
+			"<IfModule mod_authz_core.c>\n" .
+			"    Require all denied\n" .
+			"</IfModule>\n" .
+			"<IfModule !mod_authz_core.c>\n" .
 			"    Order Deny,Allow\n" .
 			"    Deny from all\n" .
+			"</IfModule>\n" .
+			"<FilesMatch \".*\">\n" .
+			"    <IfModule mod_authz_core.c>\n" .
+			"        Require all denied\n" .
+			"    </IfModule>\n" .
+			"    <IfModule !mod_authz_core.c>\n" .
+			"        Order Deny,Allow\n" .
+			"        Deny from all\n" .
+			"    </IfModule>\n" .
 			"</FilesMatch>\n" .
 			"<IfModule mod_php7.c>\n" .
 			"    php_flag engine off\n" .
@@ -212,9 +240,28 @@ function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 		@file_put_contents( $htaccess_file, $htaccess_content );
 	}
 
+	// Write web.config for IIS servers
+	$webconfig_file = $quarantine_dir . '/web.config';
+	if ( ! file_exists( $webconfig_file ) ) {
+		$webconfig_content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" .
+			"<configuration>\n" .
+			"  <system.webServer>\n" .
+			"    <authorization>\n" .
+			"      <deny users=\"*\" />\n" .
+			"    </authorization>\n" .
+			"  </system.webServer>\n" .
+			"</configuration>";
+		@file_put_contents( $webconfig_file, $webconfig_content );
+	}
+
 	$index_file = $quarantine_dir . '/index.php';
 	if ( ! file_exists( $index_file ) ) {
-		@file_put_contents( $index_file, "<?php // Silence is golden." );
+		@file_put_contents( $index_file, "<?php // Silence is golden.\nexit;\n" );
+	}
+
+	$html_file = $quarantine_dir . '/index.html';
+	if ( ! file_exists( $html_file ) ) {
+		@file_put_contents( $html_file, "<!DOCTYPE html><html><head><title>403 Forbidden</title></head><body><h1>Directory access is forbidden.</h1></body></html>" );
 	}
 
 	if ( ! empty( $subdir ) ) {
@@ -224,7 +271,11 @@ function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 		}
 		$sub_index = $target_sub . '/index.php';
 		if ( ! file_exists( $sub_index ) ) {
-			@file_put_contents( $sub_index, "<?php // Silence is golden." );
+			@file_put_contents( $sub_index, "<?php // Silence is golden.\nexit;\n" );
+		}
+		$sub_html = $target_sub . '/index.html';
+		if ( ! file_exists( $sub_html ) ) {
+			@file_put_contents( $sub_html, "<!DOCTYPE html><html><head><title>403 Forbidden</title></head><body><h1>Directory access is forbidden.</h1></body></html>" );
 		}
 		return $target_sub;
 	}
@@ -235,48 +286,17 @@ function sitecure_get_site_quarantine_dir( $site_id = 0, $subdir = '' ) {
 /**
  * Initialize isolated quarantine storage directory
  */
-function sitecure_init_quarantine_storage( $site_id = 0 ) {
-	return sitecure_get_site_quarantine_dir( $site_id );
+function hkymalvexa_init_quarantine_storage( $site_id = 0 ) {
+	return hkymalvexa_get_site_quarantine_dir( $site_id );
 }
 
 /**
- * Check if Pro / Multi-site tier is active
- * Verified strictly through server-side Cloudflare Worker verification
+ * Check if another site can be added
  *
  * @return bool
  */
-function sitecure_is_dev_mode() {
-	// Check saved license key and verified status from Cloudflare microservice
-	$license = get_option( 'sitecure_pro_license_key', '' );
-	if ( ! empty( $license ) ) {
-		if ( get_transient( 'sitecure_pro_verified' ) ) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-/**
- * Get allowed site quota for current tier
- *
- * @return int 1 for Free tier, 9999 for Developer / Pro
- */
-function sitecure_get_site_quota() {
-	if ( sitecure_is_dev_mode() ) {
-		return 9999;
-	}
-	return 1;
-}
-
-/**
- * Check if another site can be added within the quota
- *
- * @return bool
- */
-function sitecure_can_add_site() {
-	$sites = sitecure_get_sites();
-	return count( $sites ) < sitecure_get_site_quota();
+function hkymalvexa_can_add_site() {
+	return true;
 }
 
 /**
@@ -284,9 +304,9 @@ function sitecure_can_add_site() {
  *
  * @return int|WP_Error Site ID or error
  */
-function sitecure_register_local_site() {
+function hkymalvexa_register_local_site() {
 	global $wpdb;
-	$table = sitecure_get_table( 'sites' );
+	$table = hkymalvexa_get_table( 'sites' );
 
 	// Check if already registered
 	$existing = $wpdb->get_row( "SELECT * FROM $table WHERE access_mode = 'local' LIMIT 1" );
@@ -294,24 +314,12 @@ function sitecure_register_local_site() {
 		return (int) $existing->id;
 	}
 
-	if ( ! sitecure_can_add_site() ) {
-		return new WP_Error( 'quota_reached', 'Free plan limit reached (1 site). Upgrade to Pro to manage multiple websites.' );
-	}
-
-	// Option B Cloud Verification Check
-	if ( function_exists( 'sitecure_cloud_register_domain' ) ) {
-		$cloud_check = sitecure_cloud_register_domain( home_url() );
-		if ( is_wp_error( $cloud_check ) ) {
-			return $cloud_check;
-		}
-	}
-
-	$name = 'SiteCure';
+	$name = 'HKY MalVexa';
 
 	$wpdb->insert(
 		$table,
 		array(
-			'name'          => 'SiteCure (Current Site)',
+			'name'          => 'HKY MalVexa (Current Site)',
 			'url'           => home_url(),
 			'environment'   => 'production',
 			'access_mode'   => 'local',
@@ -322,7 +330,7 @@ function sitecure_register_local_site() {
 	);
 
 	$site_id = (int) $wpdb->insert_id;
-	sitecure_log_audit( $site_id, 'register_site', 'local', "Registered hosted site '{$name}' as Site #{$site_id}" );
+	hkymalvexa_log_audit( $site_id, 'register_site', 'local', "Registered hosted site '{$name}' as Site #{$site_id}" );
 
 	return $site_id;
 }
@@ -333,27 +341,22 @@ function sitecure_register_local_site() {
  * @param int $site_id
  * @return bool
  */
-function sitecure_delete_site( $site_id ) {
+function hkymalvexa_delete_site( $site_id ) {
 	global $wpdb;
 	$site_id = (int) $site_id;
 	if ( $site_id <= 0 ) {
 		return false;
 	}
 
-	$table_sites      = sitecure_get_table( 'sites' );
-	$table_scans      = sitecure_get_table( 'scans' );
-	$table_findings   = sitecure_get_table( 'findings' );
-	$table_quarantine = sitecure_get_table( 'quarantine' );
-	$table_audit      = sitecure_get_table( 'audit_logs' );
+	$table_sites      = hkymalvexa_get_table( 'sites' );
+	$table_scans      = hkymalvexa_get_table( 'scans' );
+	$table_findings   = hkymalvexa_get_table( 'findings' );
+	$table_quarantine = hkymalvexa_get_table( 'quarantine' );
+	$table_audit      = hkymalvexa_get_table( 'audit_logs' );
 
 	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	if ( ! $site ) {
 		return false;
-	}
-
-	// Release domain quota slot in Cloud Verification Microservice (Option B)
-	if ( function_exists( 'sitecure_cloud_release_domain' ) && ! empty( $site->url ) ) {
-		sitecure_cloud_release_domain( $site->url );
 	}
 
 	// Delete from tables
@@ -369,9 +372,9 @@ function sitecure_delete_site( $site_id ) {
 /**
  * Log an audit event
  */
-function sitecure_log_audit( $site_id, $action, $target, $details ) {
+function hkymalvexa_log_audit( $site_id, $action, $target, $details ) {
 	global $wpdb;
-	$table_audit = sitecure_get_table( 'audit_logs' );
+	$table_audit = hkymalvexa_get_table( 'audit_logs' );
 	$ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 	$wpdb->insert(
@@ -389,16 +392,16 @@ function sitecure_log_audit( $site_id, $action, $target, $details ) {
 }
 
 /**
- * Get managed sites
+ * Get registered sites
  */
-function sitecure_get_sites() {
+function hkymalvexa_get_sites() {
 	global $wpdb;
-	$table = sitecure_get_table( 'sites' );
+	$table = hkymalvexa_get_table( 'sites' );
 	$results = $wpdb->get_results( "SELECT * FROM $table ORDER BY id ASC" );
 	if ( ! empty( $results ) ) {
 		foreach ( $results as &$s ) {
 			if ( isset( $s->access_mode ) && $s->access_mode === 'local' ) {
-				$s->name = 'SiteCure (Current Site)';
+				$s->name = 'HKY MalVexa (Current Site)';
 			}
 		}
 	}
@@ -406,59 +409,71 @@ function sitecure_get_sites() {
 }
 
 /**
- * Resolve filesystem root directory for any site
+ * Resolve validated filesystem root directory for any site
+ *
+ * @param int|object $site_or_id
+ * @return string
  */
-function sitecure_get_site_root( $site_id ) {
+function hkymalvexa_get_site_root( $site_or_id ) {
 	global $wpdb;
-	$table_sites = sitecure_get_table( 'sites' );
-	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
-	$site_root = ABSPATH;
 
-	if ( $site ) {
-		if ( ! empty( $site->wp_path ) && file_exists( $site->wp_path ) ) {
-			$site_root = $site->wp_path;
-		} elseif ( ! empty( $site->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' ) ) ) {
-			$site_root = dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' );
-		} else {
-			$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
-			if ( ! empty( $url_path ) ) {
-				$slug = trim( $url_path, '/' );
-				if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
-					$site_root = dirname( ABSPATH ) . '/' . $slug;
-				}
-			}
-		}
+	if ( is_object( $site_or_id ) ) {
+		$site = $site_or_id;
+	} else {
+		$site_id     = (int) $site_or_id;
+		$table_sites = hkymalvexa_get_table( 'sites' );
+		$site        = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	}
+
+	$site_root = ABSPATH;
+	if ( $site && ! empty( $site->wp_path ) && @is_dir( $site->wp_path ) ) {
+		$real      = realpath( $site->wp_path );
+		$site_root = $real ? $real : $site->wp_path;
+	}
+
 	return rtrim( str_replace( '\\', '/', $site_root ), '/' );
 }
 
 /**
- * Get dashboard overview statistics
+ * Helper to get the single local site ID
+ *
+ * @return int
  */
-function sitecure_get_dashboard_stats() {
+function hkymalvexa_get_current_site_id() {
+	global $wpdb;
+	$table_sites = hkymalvexa_get_table( 'sites' );
+	$site_id     = (int) $wpdb->get_var( "SELECT id FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
+	if ( ! $site_id ) {
+		hkymalvexa_maybe_install_tables();
+		$site_id = (int) $wpdb->get_var( "SELECT id FROM $table_sites WHERE access_mode = 'local' LIMIT 1" );
+	}
+	return $site_id > 0 ? $site_id : 1;
+}
+
+/**
+ * Get dashboard overview statistics for the current WordPress site
+ */
+function hkymalvexa_get_dashboard_stats() {
 	global $wpdb;
 
-	$table_sites = sitecure_get_table( 'sites' );
-	$table_scans = sitecure_get_table( 'scans' );
-	$table_findings = sitecure_get_table( 'findings' );
-	$table_quarantine = sitecure_get_table( 'quarantine' );
+	$table_scans      = hkymalvexa_get_table( 'scans' );
+	$table_findings   = hkymalvexa_get_table( 'findings' );
+	$table_quarantine = hkymalvexa_get_table( 'quarantine' );
 
-	$total_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites" );
-	$healthy_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites WHERE health_status = 'healthy'" );
-	$warning_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites WHERE health_status = 'warning'" );
-	$compromised_sites = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_sites WHERE health_status = 'compromised'" );
+	$total_scans        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_scans" );
+	$active_findings    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new'" );
+	$critical_findings  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new' AND severity = 'critical'" );
+	$quarantined_files  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_quarantine WHERE status IN ('quarantined', 'cleaned')" );
+	$last_scanned_files = (int) $wpdb->get_var( "SELECT total_files FROM $table_scans ORDER BY id DESC LIMIT 1" );
+	$last_scan_time     = $wpdb->get_var( "SELECT completed_at FROM $table_scans WHERE status = 'completed' ORDER BY id DESC LIMIT 1" );
 
-	$total_scans = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_scans" );
-	$active_findings = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new'" );
-	$critical_findings = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_findings WHERE status = 'new' AND severity = 'critical'" );
-	$quarantined_files = (int) $wpdb->get_var( "SELECT COUNT(*) FROM $table_quarantine WHERE status IN ('quarantined', 'cleaned')" );
+	$protection_status  = ( $active_findings > 0 ) ? 'threats_found' : 'protected';
 
 	return array(
-		'total_sites'        => $total_sites,
-		'healthy_sites'      => $healthy_sites,
-		'warning_sites'      => $warning_sites,
-		'compromised_sites'  => $compromised_sites,
+		'protection_status'  => $protection_status,
 		'total_scans'        => $total_scans,
+		'last_scanned_files' => $last_scanned_files,
+		'last_scan_time'     => $last_scan_time,
 		'active_findings'    => $active_findings,
 		'critical_findings'  => $critical_findings,
 		'quarantined_files'  => $quarantined_files,

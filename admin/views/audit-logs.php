@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Audit Logs View
+ * HKY MalVexa Audit Logs View
  */
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
 // phpcs:disable WordPress.DB.DirectDatabaseQuery
@@ -12,8 +12,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 global $wpdb;
-$table_audit = sitecure_get_table( 'audit_logs' );
-$table_sites = sitecure_get_table( 'sites' );
+$table_audit = hkymalvexa_get_table( 'audit_logs' );
+$table_sites = hkymalvexa_get_table( 'sites' );
 
 // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 $logs = $wpdb->get_results(
@@ -24,10 +24,10 @@ $logs = $wpdb->get_results(
 );
 ?>
 
-<div class="wrap sitecure-wrap">
+<div class="wrap hkymalvexa-wrap">
 
-	<div class="sitecure-header">
-		<div class="sitecure-title-area">
+	<div class="hkymalvexa-header">
+		<div class="hkymalvexa-title-area">
 			<h1><span class="dashicons dashicons-list-view"></span> Incident & Audit Log Trail</h1>
 			<p>Immutable audit trail of all diagnostic scans, threat quarantines, core restorations, and operator actions.</p>
 		</div>
@@ -46,7 +46,6 @@ $logs = $wpdb->get_results(
 					<thead>
 						<tr>
 							<th>Date / Time</th>
-							<th>Site</th>
 							<th>Action</th>
 							<th>Target</th>
 							<th>Details</th>
@@ -57,11 +56,6 @@ $logs = $wpdb->get_results(
 						<?php foreach ( $logs as $l ) : ?>
 							<tr>
 								<td><code style="font-size: 11px;"><?php echo esc_html( $l->created_at ); ?></code></td>
-								<td>
-									<span class="wpd-badge" style="background: #e0f2fe; color: #0284c7; border-color: #bae6fd;">
-										<?php echo esc_html( $l->site_name ? $l->site_name : 'System' ); ?>
-									</span>
-								</td>
 								<td><span class="wpd-badge"><?php echo esc_html( strtoupper( $l->action ) ); ?></span></td>
 								<td><strong style="color: var(--wpd-text-main);"><?php echo esc_html( $l->target_item ); ?></strong></td>
 								<td style="color: var(--wpd-text-muted);"><?php echo esc_html( $l->details ); ?></td>

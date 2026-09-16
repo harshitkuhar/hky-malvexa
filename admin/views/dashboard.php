@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Dashboard View
+ * HKY MalVexa Dashboard View
  */
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
 // phpcs:disable WordPress.DB.DirectDatabaseQuery
@@ -11,77 +11,78 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$stats = sitecure_get_dashboard_stats();
-$sites = sitecure_get_sites();
+$stats = hkymalvexa_get_dashboard_stats();
 
 global $wpdb;
-$table_scans = sitecure_get_table( 'scans' );
-$table_findings = sitecure_get_table( 'findings' );
-$table_sites = sitecure_get_table( 'sites' );
+$table_scans    = hkymalvexa_get_table( 'scans' );
+$table_findings = hkymalvexa_get_table( 'findings' );
 
-$recent_scans = $wpdb->get_results( "SELECT sc.*, s.name as site_name FROM `{$table_scans}` sc LEFT JOIN `{$table_sites}` s ON sc.site_id = s.id ORDER BY sc.id DESC LIMIT 5" );
-$recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM `{$table_findings}` f LEFT JOIN `{$table_sites}` s ON f.site_id = s.id WHERE f.status = 'new' AND f.file_path NOT LIKE '%sitecure%' ORDER BY f.id DESC LIMIT 6" );
+$recent_scans    = $wpdb->get_results( "SELECT * FROM `{$table_scans}` ORDER BY id DESC LIMIT 5" );
+$recent_findings = $wpdb->get_results( "SELECT * FROM `{$table_findings}` WHERE status = 'new' AND file_path NOT LIKE '%hky-malvexa%' ORDER BY id DESC LIMIT 6" );
 ?>
 
-<div class="wrap sitecure-wrap">
+<div class="wrap hkymalvexa-wrap">
 
 	<!-- Header Banner -->
-	<div class="sitecure-header">
-		<div class="sitecure-title-area">
-			<h1><span class="dashicons dashicons-shield-alt"></span> SiteCure <span class="sitecure-badge">V1.0</span></h1>
+	<div class="hkymalvexa-header">
+		<div class="hkymalvexa-title-area">
+			<h1><span class="dashicons dashicons-shield-alt"></span> HKY MalVexa <span class="hkymalvexa-badge">V1.0</span></h1>
 			<p>WordPress Emergency Diagnosis, Malware Investigation, Cleanup & Recovery Platform</p>
 		</div>
-		<div class="sitecure-header-actions" style="display: flex; align-items: center; gap: 10px;">
-			<?php if ( function_exists( 'sitecure_is_dev_mode' ) && sitecure_is_dev_mode() ) : ?>
+		<div class="hkymalvexa-header-actions" style="display: flex; align-items: center; gap: 10px;">
+			<?php if ( $stats['protection_status'] === 'protected' ) : ?>
 				<span class="wpd-badge" style="background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
-					<span class="dashicons dashicons-superhero" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Developer Unlimited
+					<span class="dashicons dashicons-shield" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Protected
 				</span>
 			<?php else : ?>
-				<span class="wpd-badge" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
-					<span class="dashicons dashicons-admin-site" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Free Plan: <?php echo count( $sites ); ?>/1 Site
+				<span class="wpd-badge" style="background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600;">
+					<span class="dashicons dashicons-warning" style="font-size: 14px; vertical-align: middle; margin-right: 2px;"></span> Threats Detected
 				</span>
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=sitecure-sites' ) ); ?>" style="background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); color: #fff; border: none; border-radius: 20px; font-weight: 600; font-size: 11px; padding: 5px 12px; text-decoration: none; box-shadow: 0 2px 6px rgba(79,70,229,0.3);">
-					<span class="dashicons dashicons-star-filled" style="font-size: 13px; width: 13px; height: 13px; vertical-align: middle; margin-right: 2px;"></span> Upgrade to Pro
-				</a>
 			<?php endif; ?>
 
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=sitecure-findings' ) ); ?>" class="wpd-btn wpd-btn-emergency">
-				<span class="dashicons dashicons-warning"></span> Emergency Scan
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=hkymalvexa-findings' ) ); ?>" class="wpd-btn wpd-btn-emergency">
+				<span class="dashicons dashicons-controls-play"></span> Emergency Scan
 			</a>
 			<button id="wpd-btn-verify-site" class="wpd-btn wpd-btn-primary">
-				<span class="dashicons dashicons-heart"></span> Verify Site Health
+				<span class="dashicons dashicons-heart"></span> Verify Core Integrity
 			</button>
 		</div>
 	</div>
 
 	<!-- Stats Grid -->
-	<div class="sitecure-stats-grid">
+	<div class="hkymalvexa-stats-grid">
 		<div class="wpd-stat-card">
-			<div class="wpd-stat-icon wpd-icon-cyan"><span class="dashicons dashicons-networking"></span></div>
+			<div class="wpd-stat-icon <?php echo ( $stats['protection_status'] === 'protected' ) ? 'wpd-icon-emerald' : 'wpd-icon-rose'; ?>">
+				<span class="dashicons <?php echo ( $stats['protection_status'] === 'protected' ) ? 'dashicons-yes-alt' : 'dashicons-warning'; ?>"></span>
+			</div>
 			<div>
-				<div class="wpd-stat-val"><?php echo esc_html( $stats['total_sites'] ); ?></div>
-				<div class="wpd-stat-label">Managed Sites</div>
+				<div class="wpd-stat-val" style="font-size: 20px;">
+					<?php echo ( $stats['protection_status'] === 'protected' ) ? 'Protected' : 'Threats Found'; ?>
+				</div>
+				<div class="wpd-stat-label">Security Status</div>
 			</div>
 		</div>
 		<div class="wpd-stat-card">
-			<div class="wpd-stat-icon wpd-icon-emerald"><span class="dashicons dashicons-yes-alt"></span></div>
+			<div class="wpd-stat-icon wpd-icon-cyan"><span class="dashicons dashicons-media-document"></span></div>
 			<div>
-				<div class="wpd-stat-val"><?php echo esc_html( $stats['healthy_sites'] ); ?></div>
-				<div class="wpd-stat-label">Healthy Sites</div>
+				<div class="wpd-stat-val">
+					<?php echo ( $stats['last_scanned_files'] > 0 ) ? esc_html( number_format( $stats['last_scanned_files'] ) ) : 'Ready'; ?>
+				</div>
+				<div class="wpd-stat-label">Files Cataloged</div>
 			</div>
 		</div>
 		<div class="wpd-stat-card">
 			<div class="wpd-stat-icon wpd-icon-rose"><span class="dashicons dashicons-dismiss"></span></div>
 			<div>
-				<div class="wpd-stat-val"><?php echo esc_html( $stats['critical_findings'] ); ?></div>
-				<div class="wpd-stat-label">Critical Findings</div>
+				<div class="wpd-stat-val"><?php echo esc_html( $stats['active_findings'] ); ?></div>
+				<div class="wpd-stat-label">Active Threats</div>
 			</div>
 		</div>
 		<div class="wpd-stat-card">
 			<div class="wpd-stat-icon wpd-icon-amber"><span class="dashicons dashicons-lock"></span></div>
 			<div>
 				<div class="wpd-stat-val"><?php echo esc_html( $stats['quarantined_files'] ); ?></div>
-				<div class="wpd-stat-label">Quarantined Files</div>
+				<div class="wpd-stat-label">Quarantined & Neutralized</div>
 			</div>
 		</div>
 	</div>
@@ -89,37 +90,31 @@ $recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM `{$
 	<!-- Recent Critical Findings -->
 	<div class="wpd-card">
 		<div class="wpd-card-header">
-			<h2 class="wpd-card-title"><span class="dashicons dashicons-warning"></span> Active Findings Requiring Review</h2>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=sitecure-findings' ) ); ?>" class="wpd-btn wpd-btn-secondary wpd-btn-sm">View All Findings</a>
+			<h2 class="wpd-card-title"><span class="dashicons dashicons-warning"></span> Active Threats Requiring Review</h2>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=hkymalvexa-findings' ) ); ?>" class="wpd-btn wpd-btn-secondary wpd-btn-sm">View All Findings</a>
 		</div>
 		<div class="wpd-card-body" style="padding: 0;">
 			<?php if ( empty( $recent_findings ) ) : ?>
-				<div style="padding: 30px; text-align: center; color: var(--wpd-text-muted);">
-					<span class="dashicons dashicons-shield" style="font-size: 38px; width: 38px; height: 38px; color: var(--wpd-emerald); margin-bottom: 10px;"></span>
-					<p style="margin: 0; font-size: 15px; color: #fff;">No active malware or critical threats detected.</p>
-					<p style="margin: 4px 0 0 0; font-size: 13px;">Your WordPress installation is clean according to current rules.</p>
+				<div style="padding: 40px 20px; text-align: center; color: var(--wpd-text-muted);">
+					<span class="dashicons dashicons-shield" style="font-size: 42px; width: 42px; height: 42px; color: var(--wpd-emerald); margin-bottom: 12px;"></span>
+					<p style="margin: 0; font-size: 16px; font-weight: 600; color: var(--wpd-text-main);">No active malware or critical threats detected.</p>
+					<p style="margin: 6px 0 0 0; font-size: 13px;">Your WordPress installation is clean according to current rules.</p>
 				</div>
 			<?php else : ?>
 				<table class="wpd-table">
 					<thead>
 						<tr>
-							<th>Site</th>
 							<th>Severity</th>
 							<th>Category</th>
 							<th>Location</th>
 							<th>Line</th>
 							<th>Description</th>
-							<th>Action</th>
+							<th style="text-align: right;">Action</th>
 						</tr>
 					</thead>
 					<tbody>
 						<?php foreach ( $recent_findings as $f ) : ?>
 							<tr>
-								<td>
-									<span class="wpd-badge">
-										<?php echo esc_html( $f->site_name ? $f->site_name : 'Site #' . $f->site_id ); ?>
-									</span>
-								</td>
 								<td>
 									<span class="wpd-tag wpd-tag-<?php echo esc_attr( $f->severity ); ?>">
 										<?php echo esc_html( strtoupper( $f->severity ) ); ?>
@@ -129,7 +124,7 @@ $recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM `{$
 								<td><strong><?php echo esc_html( $f->file_path ); ?></strong></td>
 								<td><?php echo (int) $f->line_number; ?></td>
 								<td><?php echo esc_html( wp_trim_words( $f->description, 10 ) ); ?></td>
-								<td>
+								<td style="text-align: right;">
 									<button class="wpd-btn wpd-btn-secondary wpd-btn-sm wpd-btn-view-code" data-id="<?php echo (int) $f->id; ?>">
 										Inspect Evidence
 									</button>
@@ -155,19 +150,18 @@ $recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM `{$
 	<div class="wpd-card">
 		<div class="wpd-card-header">
 			<h2 class="wpd-card-title"><span class="dashicons dashicons-backup"></span> Recent Scan History</h2>
-			<a href="<?php echo esc_url( admin_url( 'admin.php?page=sitecure-findings' ) ); ?>" class="wpd-btn wpd-btn-secondary wpd-btn-sm">Launch Scan</a>
+			<a href="<?php echo esc_url( admin_url( 'admin.php?page=hkymalvexa-findings' ) ); ?>" class="wpd-btn wpd-btn-secondary wpd-btn-sm">Launch Scan</a>
 		</div>
 		<div class="wpd-card-body" style="padding: 0;">
 			<?php if ( empty( $recent_scans ) ) : ?>
-				<div style="padding: 24px; text-align: center; color: var(--wpd-text-muted);">
-					No previous scans recorded yet. Run your first scan from the Scan Center!
+				<div style="padding: 30px; text-align: center; color: var(--wpd-text-muted);">
+					No previous scans recorded yet. Click <strong>Emergency Scan</strong> above to inspect your site.
 				</div>
 			<?php else : ?>
 				<table class="wpd-table">
 					<thead>
 						<tr>
 							<th>Scan ID</th>
-							<th>Site</th>
 							<th>Type</th>
 							<th>Status</th>
 							<th>Files Scanned</th>
@@ -180,11 +174,6 @@ $recent_findings = $wpdb->get_results( "SELECT f.*, s.name as site_name FROM `{$
 						<?php foreach ( $recent_scans as $s ) : ?>
 							<tr>
 								<td>#<?php echo (int) $s->id; ?></td>
-								<td>
-									<span class="wpd-badge">
-										<?php echo esc_html( $s->site_name ? $s->site_name : 'Site #' . $s->site_id ); ?>
-									</span>
-								</td>
 								<td><span class="wpd-badge"><?php echo esc_html( strtoupper( $s->scan_type ) ); ?></span></td>
 								<td>
 									<span class="wpd-tag wpd-tag-<?php echo ( $s->status === 'completed' ) ? 'healthy' : 'medium'; ?>">

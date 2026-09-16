@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Procedural Database Forensics Scanner
+ * HKY MalVexa Procedural Database Forensics Scanner
  * Inspects WPCode snippets, wp_options, wp_users, and wp_posts for injected payloads & rogue admins
  * Connects directly to the target site's database via target wp-config.php credentials
  */
@@ -14,14 +14,14 @@ if ( ! defined( 'ABSPATH' ) ) {
  * @param int $site_id
  * @return wpdb Instance of wpdb connected to the target database (or global $wpdb as fallback)
  */
-function sitecure_get_target_db( $site_id = 0 ) {
+function hkymalvexa_get_target_db( $site_id = 0 ) {
 	global $wpdb;
 
 	if ( empty( $site_id ) || (int) $site_id <= 0 ) {
 		return $wpdb;
 	}
 
-	$site_root = sitecure_get_site_root( $site_id );
+	$site_root = hkymalvexa_get_site_root( $site_id );
 	if ( empty( $site_root ) || ! is_dir( $site_root ) ) {
 		return $wpdb;
 	}
@@ -94,10 +94,10 @@ function sitecure_get_target_db( $site_id = 0 ) {
  * @param int $site_id
  * @return array List of findings
  */
-function sitecure_scan_database( $site_id = 0 ) {
-	$db = sitecure_get_target_db( $site_id );
+function hkymalvexa_scan_database( $site_id = 0 ) {
+	$db = hkymalvexa_get_target_db( $site_id );
 	$findings = array();
-	$rules = sitecure_get_malware_rules();
+	$rules = hkymalvexa_get_malware_rules();
 
 	// 1. Dedicated WPCode & Code Snippets Plugin Database Forensics
 	// Modern WPCode (2.0+) and Code Snippets store active code in {$prefix}snippets
@@ -110,7 +110,7 @@ function sitecure_scan_database( $site_id = 0 ) {
 			foreach ( $snippets as $sp ) {
 				$is_trashed = ( isset( $sp->status ) && $sp->status === 'trash' );
 				$code = isset( $sp->code ) ? $sp->code : '';
-				$is_neutralized = ( stripos( $code, 'SITECURE NEUTRALIZED MALWARE' ) !== false );
+				$is_neutralized = ( stripos( $code, 'HKYMALVEXA NEUTRALIZED MALWARE' ) !== false );
 
 				// Skip if completely empty, or if already neutralized AND active on live site
 				if ( empty( $code ) || ( $is_neutralized && ! $is_trashed ) ) {
@@ -183,7 +183,7 @@ function sitecure_scan_database( $site_id = 0 ) {
 		foreach ( $snippet_posts as $sp ) {
 			$is_trashed = ( isset( $sp->post_status ) && $sp->post_status === 'trash' );
 			$code = $sp->post_content;
-			$is_neutralized = ( stripos( $code, 'SITECURE NEUTRALIZED MALWARE' ) !== false );
+			$is_neutralized = ( stripos( $code, 'HKYMALVEXA NEUTRALIZED MALWARE' ) !== false );
 
 			// Skip if completely empty, or if already neutralized AND active on live site
 			if ( empty( $code ) || ( $is_neutralized && ! $is_trashed ) ) {
@@ -285,7 +285,7 @@ function sitecure_scan_database( $site_id = 0 ) {
 	if ( ! empty( $options_query ) ) {
 		foreach ( $options_query as $opt ) {
 			$val = $opt->option_value;
-			if ( empty( $val ) || stripos( $val, 'SITECURE NEUTRALIZED MALWARE' ) !== false ) {
+			if ( empty( $val ) || stripos( $val, 'HKYMALVEXA NEUTRALIZED MALWARE' ) !== false ) {
 				continue;
 			}
 			if ( preg_match( '/(?:slot88|joker123|sbobet|viagra|cialis|online-casino|FilesMan|eval\s*\(\s*(?:gzinflate|base64_decode)|(?:window|document)\.location(?:\.href)?\s*=\s*[\'"]http)/i', $val ) ) {
@@ -323,7 +323,7 @@ function sitecure_scan_database( $site_id = 0 ) {
 		foreach ( $posts_query as $post ) {
 			$is_trashed = ( isset( $post->post_status ) && $post->post_status === 'trash' );
 			$content = $post->post_content;
-			$is_neutralized = ( stripos( $content, 'SITECURE NEUTRALIZED MALWARE' ) !== false );
+			$is_neutralized = ( stripos( $content, 'HKYMALVEXA NEUTRALIZED MALWARE' ) !== false );
 			if ( empty( $content ) || ( $is_neutralized && ! $is_trashed ) ) {
 				continue;
 			}

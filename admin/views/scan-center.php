@@ -1,9 +1,9 @@
 <?php
 /**
- * SiteCure Scan Center View
+ * HKY MalVexa Scan Center View
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-require_once SITECURE_PLUGIN_DIR . 'admin/views/findings.php';
+require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/findings.php';

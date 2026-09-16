@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Procedural Master Scan Engine
+ * HKY MalVexa Procedural Master Scan Engine
  * Chunked batched scanner guaranteeing zero server timeouts on any hosting
  */
 // phpcs:disable WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter -- Custom database queries for security scan batches and findings.
@@ -12,53 +12,28 @@ if ( ! defined( 'ABSPATH' ) ) {
 /**
  * Initialize a new scan job and catalog target files
  */
-function sitecure_init_scan( $site_id, $scan_type = 'deep' ) {
+function hkymalvexa_init_scan( $site_id, $scan_type = 'deep' ) {
 	global $wpdb;
 
-	$table_sites = sitecure_get_table( 'sites' );
-	$table_scans = sitecure_get_table( 'scans' );
+	$table_sites = hkymalvexa_get_table( 'sites' );
+	$table_scans = hkymalvexa_get_table( 'scans' );
 
 	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $site_id ) );
 	if ( ! $site ) {
 		return new WP_Error( 'not_found', 'Site not found.' );
 	}
 
-	// Option B Security: Verify that domain is authorized by cloud license service before scanning
-	if ( function_exists( 'sitecure_cloud_verify_domain' ) ) {
-		$domain_check = sitecure_cloud_verify_domain( $site->url );
-		if ( is_wp_error( $domain_check ) ) {
-			return $domain_check;
-		}
-	}
-
 	// Resolve target site path dynamically
-	$scan_path = ABSPATH;
-	if ( ! empty( $site->wp_path ) ) {
-		if ( file_exists( $site->wp_path ) ) {
-			$scan_path = $site->wp_path;
-		} elseif ( file_exists( dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' ) ) ) {
-			$scan_path = dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' );
-		}
-	} else {
-		// Auto-detect sibling directory by site URL slug (e.g. /betterdays)
-		$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
-		if ( ! empty( $url_path ) ) {
-			$slug = trim( $url_path, '/' );
-			if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
-				$scan_path = dirname( ABSPATH ) . '/' . $slug;
-			}
-		}
-	}
-	$scan_path = rtrim( str_replace( '\\', '/', $scan_path ), '/' );
+	$scan_path = hkymalvexa_get_site_root( $site );
 
 	// Clean out previous findings for THIS specific site to prevent cross-contamination
-	$table_findings = sitecure_get_table( 'findings' );
+	$table_findings = hkymalvexa_get_table( 'findings' );
 	$wpdb->delete( $table_findings, array( 'site_id' => $site_id ) );
 
 	// Catalog all target files across whole site
-	$files = sitecure_catalog_files( $scan_path );
+	$files = hkymalvexa_catalog_files( $scan_path );
 	$total_files = count( $files );
-	$breakdown = sitecure_get_catalog_breakdown( $files );
+	$breakdown = hkymalvexa_get_catalog_breakdown( $files );
 
 	// Insert scan record
 	$wpdb->insert(
@@ -78,13 +53,13 @@ function sitecure_init_scan( $site_id, $scan_type = 'deep' ) {
 	$scan_id = $wpdb->insert_id;
 
 	// Cache file queue in transient for chunked processing
-	set_transient( 'sitecure_file_queue_' . $scan_id, $files, 2 * HOUR_IN_SECONDS );
+	set_transient( 'hkymalvexa_file_queue_' . $scan_id, $files, 2 * HOUR_IN_SECONDS );
 
 	// Pre-load official checksums cache
-	sitecure_get_core_checksums();
+	hkymalvexa_get_core_checksums();
 
 	// Log audit event
-	sitecure_log_audit( $site_id, 'start_scan', $site->name, "Started {$scan_type} scan with {$total_files} files cataloged." );
+	hkymalvexa_log_audit( $site_id, 'start_scan', $site->name, "Started {$scan_type} scan with {$total_files} files cataloged." );
 
 	return array(
 		'scan_id'     => $scan_id,
@@ -97,19 +72,19 @@ function sitecure_init_scan( $site_id, $scan_type = 'deep' ) {
 /**
  * Process a single batch/chunk of files
  */
-function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
+function hkymalvexa_process_batch( $scan_id, $batch_size = 120 ) {
 	global $wpdb;
 
-	$table_scans = sitecure_get_table( 'scans' );
-	$table_findings = sitecure_get_table( 'findings' );
-	$table_sites = sitecure_get_table( 'sites' );
+	$table_scans = hkymalvexa_get_table( 'scans' );
+	$table_findings = hkymalvexa_get_table( 'findings' );
+	$table_sites = hkymalvexa_get_table( 'sites' );
 
 	$scan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_scans WHERE id = %d", $scan_id ) );
 	if ( ! $scan || $scan->status !== 'running' ) {
 		return new WP_Error( 'invalid_scan', 'Scan is not running.' );
 	}
 
-	$files = get_transient( 'sitecure_file_queue_' . $scan_id );
+	$files = get_transient( 'hkymalvexa_file_queue_' . $scan_id );
 	if ( false === $files || ! is_array( $files ) ) {
 		return new WP_Error( 'missing_queue', 'Scan file queue expired or missing.' );
 	}
@@ -118,33 +93,17 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 	$offset = (int) $scan->batch_offset;
 	$batch = array_slice( $files, $offset, $batch_size );
 
-	$core_checksums = sitecure_get_core_checksums();
+	$core_checksums = hkymalvexa_get_core_checksums();
 
 	// Resolve the target site directory
-	$site = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $scan->site_id ) );
-	$site_root = ABSPATH;
-	if ( $site ) {
-		if ( ! empty( $site->wp_path ) && file_exists( $site->wp_path ) ) {
-			$site_root = $site->wp_path;
-		} elseif ( ! empty( $site->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' ) ) ) {
-			$site_root = dirname( ABSPATH ) . '/' . ltrim( $site->wp_path, '/\\' );
-		} else {
-			$url_path = wp_parse_url( $site->url, PHP_URL_PATH );
-			if ( ! empty( $url_path ) ) {
-				$slug = trim( $url_path, '/' );
-				if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
-					$site_root = dirname( ABSPATH ) . '/' . $slug;
-				}
-			}
-		}
-	}
-	$site_root = rtrim( str_replace( '\\', '/', $site_root ), '/' );
+	$site      = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_sites WHERE id = %d", $scan->site_id ) );
+	$site_root = hkymalvexa_get_site_root( $site );
 
 	// At the start of the scan (offset === 0), run database, SEO spam, and persistence checks immediately
 	if ( $offset === 0 ) {
-		$persistence_hits = sitecure_scan_dropins_and_mu( $site_root );
-		$cron_hits        = sitecure_scan_cron_jobs( $scan->site_id );
-		$db_hits          = sitecure_scan_database( $scan->site_id );
+		$persistence_hits = hkymalvexa_scan_dropins_and_mu( $site_root );
+		$cron_hits        = hkymalvexa_scan_cron_jobs( $scan->site_id );
+		$db_hits          = hkymalvexa_scan_database( $scan->site_id );
 
 		$initial_checks = array_merge( $persistence_hits, $cron_hits, $db_hits );
 		foreach ( $initial_checks as $ic ) {
@@ -179,13 +138,13 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 
 	foreach ( $batch as $file_rel ) {
 		$full_path = $site_root . '/' . ltrim( $file_rel, '/\\' );
-		$classification = sitecure_classify_file( $file_rel );
+		$classification = hkymalvexa_classify_file( $file_rel );
 		$is_verified_clean_core = false;
 
 		// 1. Core Integrity
 		if ( $classification === 'CORE' ) {
 			if ( ! empty( $core_checksums ) ) {
-				$check = sitecure_verify_core_file( $file_rel, $full_path, $core_checksums );
+				$check = hkymalvexa_verify_core_file( $file_rel, $full_path, $core_checksums );
 				if ( $check ) {
 					if ( $check['status'] === 'clean' ) {
 						$is_verified_clean_core = true;
@@ -213,7 +172,7 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 
 		// 2. Uploads analysis
 		if ( $classification === 'UPLOAD' ) {
-			$upload_issues = sitecure_analyze_upload_file( $full_path, $file_rel );
+			$upload_issues = hkymalvexa_analyze_upload_file( $full_path, $file_rel );
 			if ( ! empty( $upload_issues ) ) {
 				foreach ( $upload_issues as $ui ) {
 					$ui['scan_id'] = $scan_id;
@@ -225,7 +184,7 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 
 		// 3. Config forensics
 		if ( $classification === 'CONFIG' ) {
-			$config_issues = sitecure_analyze_config_file( $full_path, $file_rel );
+			$config_issues = hkymalvexa_analyze_config_file( $full_path, $file_rel );
 			if ( ! empty( $config_issues ) ) {
 				foreach ( $config_issues as $ci ) {
 					$ci['scan_id'] = $scan_id;
@@ -237,7 +196,7 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 
 		// 4. PHP static malware detection (Runs on all non-core files, or modified core files)
 		if ( ! $is_verified_clean_core ) {
-			$malware_hits = sitecure_scan_file_malware( $full_path, $file_rel );
+			$malware_hits = hkymalvexa_scan_file_malware( $full_path, $file_rel );
 			if ( ! empty( $malware_hits ) ) {
 				foreach ( $malware_hits as $mh ) {
 					$mh['scan_id'] = $scan_id;
@@ -286,7 +245,7 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 	);
 
 	if ( $is_completed ) {
-		sitecure_finish_scan( $scan_id );
+		hkymalvexa_finish_scan( $scan_id );
 		$current_findings_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $table_findings WHERE scan_id = %d", $scan_id ) );
 	}
 
@@ -306,12 +265,12 @@ function sitecure_process_batch( $scan_id, $batch_size = 120 ) {
 /**
  * Finalize scan: run persistence/database checks and update health status
  */
-function sitecure_finish_scan( $scan_id ) {
+function hkymalvexa_finish_scan( $scan_id ) {
 	global $wpdb;
 
-	$table_scans = sitecure_get_table( 'scans' );
-	$table_sites = sitecure_get_table( 'sites' );
-	$table_findings = sitecure_get_table( 'findings' );
+	$table_scans = hkymalvexa_get_table( 'scans' );
+	$table_sites = hkymalvexa_get_table( 'sites' );
+	$table_findings = hkymalvexa_get_table( 'findings' );
 
 	$scan = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table_scans WHERE id = %d", $scan_id ) );
 	if ( ! $scan ) {
@@ -328,10 +287,10 @@ function sitecure_finish_scan( $scan_id ) {
 		)
 	);
 	if ( $already_ran_db === 0 ) {
-		$site_root = sitecure_get_site_root( $scan->site_id );
-		$persistence_hits = sitecure_scan_dropins_and_mu( $site_root );
-		$cron_hits = sitecure_scan_cron_jobs( $scan->site_id );
-		$db_hits = sitecure_scan_database( $scan->site_id );
+		$site_root = hkymalvexa_get_site_root( $scan->site_id );
+		$persistence_hits = hkymalvexa_scan_dropins_and_mu( $site_root );
+		$cron_hits = hkymalvexa_scan_cron_jobs( $scan->site_id );
+		$db_hits = hkymalvexa_scan_database( $scan->site_id );
 
 		$extra_findings = array_merge( $persistence_hits, $cron_hits, $db_hits );
 
@@ -384,17 +343,17 @@ function sitecure_finish_scan( $scan_id ) {
 	);
 
 	// Clean up transient queue
-	delete_transient( 'sitecure_file_queue_' . $scan_id );
+	delete_transient( 'hkymalvexa_file_queue_' . $scan_id );
 
 	// Log audit
-	sitecure_log_audit( $scan->site_id, 'complete_scan', "Scan #{$scan_id}", "Completed scan with {$final_findings_count} findings. Health: {$health_status}." );
+	hkymalvexa_log_audit( $scan->site_id, 'complete_scan', "Scan #{$scan_id}", "Completed scan with {$final_findings_count} findings. Health: {$health_status}." );
 }
 
 /**
  * Catalog all files relative to WordPress root
  * Recursively scans every folder: plugins, themes, uploads, core, and custom dirs
  */
-function sitecure_catalog_files( $base_dir ) {
+function hkymalvexa_catalog_files( $base_dir ) {
 	$file_list = array();
 	if ( ! is_dir( $base_dir ) ) {
 		return $file_list;
@@ -413,7 +372,7 @@ function sitecure_catalog_files( $base_dir ) {
 			try {
 				if ( $item->isFile() ) {
 					$path = str_replace( '\\', '/', $item->getPathname() );
-					if ( strpos( $path, 'sitecure-quarantine' ) !== false || strpos( $path, 'plugins/sitecure' ) !== false || strpos( $path, '.git' ) !== false ) {
+					if ( strpos( $path, 'hkymalvexa-quarantine' ) !== false || strpos( $path, 'plugins/hkymalvexa' ) !== false || strpos( $path, '.git' ) !== false ) {
 						continue;
 					}
 					$rel = ltrim( substr( $path, strlen( $base_dir ) ), '/\\' );
@@ -434,7 +393,7 @@ function sitecure_catalog_files( $base_dir ) {
 /**
  * Summarize file counts by folder category for transparent terminal logs
  */
-function sitecure_get_catalog_breakdown( $files ) {
+function hkymalvexa_get_catalog_breakdown( $files ) {
 	$stats = array(
 		'plugins' => 0,
 		'themes'  => 0,

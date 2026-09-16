@@ -1,5 +1,5 @@
 /**
- * SiteCure Modern Light Theme Stylesheet
+ * HKY MalVexa Modern Light Theme Stylesheet
  * Clean SaaS dashboard styling with polished cards, badges, and typography
  */
 
@@ -27,14 +27,14 @@
   --wpd-purple-border: #ddd6fe;
 }
 
-.sitecure-wrap {
+.hkymalvexa-wrap {
   margin: 20px 20px 0 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
   color: var(--wpd-text-main);
 }
 
 /* Header Banner */
-.sitecure-header {
+.hkymalvexa-header {
   background: #ffffff;
   border: 1px solid var(--wpd-card-border);
   border-left: 4px solid var(--wpd-primary);
@@ -47,7 +47,7 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 }
 
-.sitecure-title-area h1 {
+.hkymalvexa-title-area h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 700;
@@ -57,14 +57,14 @@
   gap: 12px;
 }
 
-.sitecure-title-area h1 .dashicons {
+.hkymalvexa-title-area h1 .dashicons {
   font-size: 28px;
   width: 28px;
   height: 28px;
   color: var(--wpd-primary);
 }
 
-.sitecure-badge {
+.hkymalvexa-badge {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -76,13 +76,13 @@
   font-weight: 600;
 }
 
-.sitecure-header p {
+.hkymalvexa-header p {
   margin: 6px 0 0 0;
   color: var(--wpd-text-muted);
   font-size: 13px;
 }
 
-.sitecure-header-actions {
+.hkymalvexa-header-actions {
   display: flex;
   gap: 12px;
 }
@@ -145,7 +145,7 @@
 }
 
 /* Stats Cards Grid */
-.sitecure-stats-grid {
+.hkymalvexa-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 18px;

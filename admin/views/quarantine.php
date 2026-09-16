@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Quarantine Vault View
+ * HKY MalVexa Quarantine Vault View
  */
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals
 // phpcs:disable WordPress.DB.DirectDatabaseQuery
@@ -12,27 +12,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Auto-sync any cleaned findings that don't have vault rows yet
-if ( function_exists( 'sitecure_sync_cleaned_findings_to_vault' ) ) {
-	sitecure_sync_cleaned_findings_to_vault();
+if ( function_exists( 'hkymalvexa_sync_cleaned_findings_to_vault' ) ) {
+	hkymalvexa_sync_cleaned_findings_to_vault();
 }
 
 global $wpdb;
-$table_quarantine = sitecure_get_table( 'quarantine' );
-$table_sites      = sitecure_get_table( 'sites' );
+$table_quarantine = hkymalvexa_get_table( 'quarantine' );
+$table_sites      = hkymalvexa_get_table( 'sites' );
 
 $items = $wpdb->get_results( "
 	SELECT q.*, s.name as site_name 
 	FROM `{$table_quarantine}` q 
 	LEFT JOIN `{$table_sites}` s ON q.site_id = s.id 
-	WHERE q.original_path NOT LIKE '%sitecure%' 
+	WHERE q.original_path NOT LIKE '%hkymalvexa%' 
 	ORDER BY q.id DESC" 
 );
 ?>
 
-<div class="wrap sitecure-wrap">
+<div class="wrap hkymalvexa-wrap">
 
-	<div class="sitecure-header">
-		<div class="sitecure-title-area">
+	<div class="hkymalvexa-header">
+		<div class="hkymalvexa-title-area">
 			<h1><span class="dashicons dashicons-lock"></span> Quarantine Storage Vault</h1>
 			<p>Secure isolated repository protected by execution-denial directives. Recover or rollback any quarantined or cleaned item anytime.</p>
 		</div>

@@ -1,107 +1,101 @@
 <?php
 /**
- * SiteCure Procedural Admin Management & Views Controller
+ * HKY MalVexa Procedural Admin Management & Views Controller
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function sitecure_admin_init() {
-	add_action( 'admin_menu', 'sitecure_register_admin_menus' );
-	add_action( 'admin_enqueue_scripts', 'sitecure_admin_enqueue_assets' );
+function hkymalvexa_admin_init() {
+	add_action( 'admin_menu', 'hkymalvexa_register_admin_menus' );
+	add_action( 'admin_enqueue_scripts', 'hkymalvexa_admin_enqueue_assets' );
 }
 
 /**
  * Register Admin Menu and Submenus
  */
-function sitecure_register_admin_menus() {
+function hkymalvexa_register_admin_menus() {
 	$capability = 'manage_options';
 
 	// Top level menu
 	add_menu_page(
-		__( 'SiteCure', 'sitecure' ),
-		__( 'SiteCure', 'sitecure' ),
+		__( 'HKY MalVexa', 'hky-malvexa' ),
+		__( 'HKY MalVexa', 'hky-malvexa' ),
 		$capability,
-		'sitecure',
-		'sitecure_render_dashboard',
+		'hky-malvexa',
+		'hkymalvexa_render_dashboard',
 		'dashicons-shield-alt',
-		3
+		80
 	);
 
 	// Primary Submenus
 	add_submenu_page(
-		'sitecure',
-		__( 'Dashboard — SiteCure', 'sitecure' ),
-		__( 'Dashboard', 'sitecure' ),
+		'hky-malvexa',
+		__( 'Dashboard — HKY MalVexa', 'hky-malvexa' ),
+		__( 'Dashboard', 'hky-malvexa' ),
 		$capability,
-		'sitecure',
-		'sitecure_render_dashboard'
+		'hky-malvexa',
+		'hkymalvexa_render_dashboard'
 	);
 
 	add_submenu_page(
-		'sitecure',
-		__( 'Managed Sites — SiteCure', 'sitecure' ),
-		__( 'Managed Sites', 'sitecure' ),
+		'hky-malvexa',
+		__( 'Scan & Findings — HKY MalVexa', 'hky-malvexa' ),
+		__( 'Scan & Findings', 'hky-malvexa' ),
 		$capability,
-		'sitecure-sites',
-		'sitecure_render_sites'
+		'hkymalvexa-findings',
+		'hkymalvexa_render_findings'
 	);
 
 	add_submenu_page(
-		'sitecure',
-		__( 'Scan & Findings — SiteCure', 'sitecure' ),
-		__( 'Scan & Findings', 'sitecure' ),
+		'hky-malvexa',
+		__( 'Quarantine Vault — HKY MalVexa', 'hky-malvexa' ),
+		__( 'Quarantine Vault', 'hky-malvexa' ),
 		$capability,
-		'sitecure-findings',
-		'sitecure_render_findings'
+		'hkymalvexa-quarantine',
+		'hkymalvexa_render_quarantine'
 	);
 
 	add_submenu_page(
-		'sitecure',
-		__( 'Quarantine Vault — SiteCure', 'sitecure' ),
-		__( 'Quarantine Vault', 'sitecure' ),
+		'hky-malvexa',
+		__( 'Audit Logs — HKY MalVexa', 'hky-malvexa' ),
+		__( 'Audit Logs', 'hky-malvexa' ),
 		$capability,
-		'sitecure-quarantine',
-		'sitecure_render_quarantine'
-	);
-
-	add_submenu_page(
-		'sitecure',
-		__( 'Audit Logs — SiteCure', 'sitecure' ),
-		__( 'Audit Logs', 'sitecure' ),
-		$capability,
-		'sitecure-audit-logs',
-		'sitecure_render_audit_logs'
+		'hkymalvexa-audit-logs',
+		'hkymalvexa_render_audit_logs'
 	);
 }
 
 /**
- * Enqueue CSS and JS assets on SiteCure admin pages
+ * Enqueue CSS and JS assets on HKY MalVexa admin pages
  */
-function sitecure_admin_enqueue_assets( $hook ) {
-	if ( strpos( $hook, 'sitecure' ) === false ) {
+function hkymalvexa_admin_enqueue_assets( $hook ) {
+	if ( strpos( $hook, 'hky-malvexa' ) === false && strpos( $hook, 'hkymalvexa' ) === false ) {
 		return;
 	}
 
-	$css_file = SITECURE_PLUGIN_DIR . 'admin/css/sitecure-admin.css';
-	$js_file  = SITECURE_PLUGIN_DIR . 'admin/js/sitecure-admin.js';
+	$css_file = HKYMALVEXA_PLUGIN_DIR . 'admin/css/hky-malvexa-admin.css';
+	$js_file  = HKYMALVEXA_PLUGIN_DIR . 'admin/js/hky-malvexa-admin.js';
 
-	$css_url = SITECURE_PLUGIN_URL . 'admin/css/' . basename( $css_file );
-	$js_url  = SITECURE_PLUGIN_URL . 'admin/js/' . basename( $js_file );
-	$css_ver = file_exists( $css_file ) ? (string) filemtime( $css_file ) : SITECURE_VERSION;
-	$js_ver  = file_exists( $js_file ) ? (string) filemtime( $js_file ) : SITECURE_VERSION;
+	$css_url = HKYMALVEXA_PLUGIN_URL . 'admin/css/' . basename( $css_file );
+	$js_url  = HKYMALVEXA_PLUGIN_URL . 'admin/js/' . basename( $js_file );
+	$css_ver = file_exists( $css_file ) ? (string) filemtime( $css_file ) : HKYMALVEXA_VERSION;
+	$js_ver  = file_exists( $js_file ) ? (string) filemtime( $js_file ) : HKYMALVEXA_VERSION;
+
+	// Core Dashicons
+	wp_enqueue_style( 'dashicons' );
 
 	// Admin stylesheet
 	wp_enqueue_style(
-		'sitecure-admin-css',
+		'hky-malvexa-admin-css',
 		$css_url,
-		array(),
+		array( 'dashicons' ),
 		$css_ver
 	);
 
 	// Admin JavaScript
 	wp_enqueue_script(
-		'sitecure-admin-js',
+		'hky-malvexa-admin-js',
 		$js_url,
 		array( 'jquery' ),
 		$js_ver,
@@ -110,42 +104,43 @@ function sitecure_admin_enqueue_assets( $hook ) {
 
 	$client_data = array(
 		'ajax_url' => admin_url( 'admin-ajax.php' ),
-		'nonce'    => wp_create_nonce( 'sitecure_admin_nonce' ),
+		'nonce'    => wp_create_nonce( 'hkymalvexa_admin_nonce' ),
 		'strings'  => array(
-			'scanning'    => __( 'Scanning in progress...', 'sitecure' ),
-			'completed'   => __( 'Scan completed successfully!', 'sitecure' ),
-			'confirm_q'   => __( 'Are you sure you want to quarantine this file? A safety backup will be created.', 'sitecure' ),
-			'confirm_r'   => __( 'Restore this file from quarantine back to its original location?', 'sitecure' ),
-			'confirm_c'   => __( 'Download pristine official core file from WordPress.org and overwrite?', 'sitecure' ),
+			'scanning'    => __( 'Scanning in progress...', 'hky-malvexa' ),
+			'completed'   => __( 'Scan completed successfully!', 'hky-malvexa' ),
+			'confirm_q'   => __( 'Are you sure you want to quarantine this file? A safety backup will be created.', 'hky-malvexa' ),
+			'confirm_r'   => __( 'Restore this file from quarantine back to its original location?', 'hky-malvexa' ),
+			'confirm_c'   => __( 'Download pristine official core file from WordPress.org and overwrite?', 'hky-malvexa' ),
 		),
 	);
 
-	wp_localize_script( 'sitecure-admin-js', 'sitecure_data', $client_data );
+	wp_localize_script( 'hky-malvexa-admin-js', 'hkymalvexa_data', $client_data );
 }
 
 /**
  * View Renderers
  */
-function sitecure_render_dashboard() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/dashboard.php';
+function hkymalvexa_render_dashboard() {
+	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/dashboard.php';
 }
 
-function sitecure_render_sites() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/sites.php';
+function hkymalvexa_render_sites() {
+	wp_safe_redirect( admin_url( 'admin.php?page=hkymalvexa-findings' ) );
+	exit;
 }
 
-function sitecure_render_scan_center() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/scan-center.php';
+function hkymalvexa_render_scan_center() {
+	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/scan-center.php';
 }
 
-function sitecure_render_findings() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/findings.php';
+function hkymalvexa_render_findings() {
+	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/findings.php';
 }
 
-function sitecure_render_quarantine() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/quarantine.php';
+function hkymalvexa_render_quarantine() {
+	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/quarantine.php';
 }
 
-function sitecure_render_audit_logs() {
-	require_once SITECURE_PLUGIN_DIR . 'admin/views/audit-logs.php';
+function hkymalvexa_render_audit_logs() {
+	require_once HKYMALVEXA_PLUGIN_DIR . 'admin/views/audit-logs.php';
 }

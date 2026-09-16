@@ -1,13 +1,13 @@
 <?php
 /**
- * SiteCure Procedural Uploads Directory Analyzer
+ * HKY MalVexa Procedural Uploads Directory Analyzer
  * Detects rogue executables, disguised extensions, and unauthorized .htaccess in wp-content/uploads/
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function sitecure_analyze_upload_file( $full_path, $relative_path ) {
+function hkymalvexa_analyze_upload_file( $full_path, $relative_path ) {
 	$findings = array();
 
 	$full_path = str_replace( '\\', '/', $full_path );

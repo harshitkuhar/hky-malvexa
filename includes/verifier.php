@@ -1,13 +1,13 @@
 <?php
 /**
- * SiteCure Procedural Post-Cleanup Verification Engine
+ * HKY MalVexa Procedural Post-Cleanup Verification Engine
  * Validates PHP syntax (lint check), detects remnant shells, and tests HTTP status
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-function sitecure_verify_site_health( $site_url = '' ) {
+function hkymalvexa_verify_site_health( $site_url = '' ) {
 	if ( empty( $site_url ) ) {
 		$site_url = home_url();
 	}
@@ -102,7 +102,7 @@ function sitecure_verify_site_health( $site_url = '' ) {
 		);
 	}
 
-	sitecure_log_audit( 1, 'verify_health', $site_url, "Verification completed. Status: {$results['status']}." );
+	hkymalvexa_log_audit( 1, 'verify_health', $site_url, "Verification completed. Status: {$results['status']}." );
 
 	return $results;
 }

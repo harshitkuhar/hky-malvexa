@@ -1,6 +1,6 @@
 <?php
 /**
- * SiteCure Plugin Uninstaller
+ * HKY MalVexa Plugin Uninstaller
  * Executed when the user clicks "Delete" on the Plugins page.
  * Completely purges all data, database tables, options, transients, and files from the host server.
  */
@@ -15,7 +15,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 /**
  * Recursively delete a directory and all of its contents
  */
-function sitecure_uninstall_recursive_rmdir( $dir ) {
+function hkymalvexa_uninstall_recursive_rmdir( $dir ) {
 	if ( ! is_dir( $dir ) ) {
 		return;
 	}
@@ -43,7 +43,7 @@ function sitecure_uninstall_recursive_rmdir( $dir ) {
 
 		$path = $dir . DIRECTORY_SEPARATOR . $item;
 		if ( is_dir( $path ) ) {
-			sitecure_uninstall_recursive_rmdir( $path );
+			hkymalvexa_uninstall_recursive_rmdir( $path );
 		} else {
 			wp_delete_file( $path );
 		}
@@ -54,43 +54,34 @@ function sitecure_uninstall_recursive_rmdir( $dir ) {
 }
 
 /**
- * Purge all SiteCure database tables, options, and filesystem data for current site
+ * Purge all HKY MalVexa database tables, options, and filesystem data for current site
  */
-function sitecure_uninstall_purge_site_data() {
+function hkymalvexa_uninstall_purge_site_data() {
 	global $wpdb;
 
 	$host_root = rtrim( str_replace( '\\', '/', ABSPATH ), '/' );
 
 	// 1. Purge quarantine vaults from all client/external sites BEFORE dropping tables
-	$table_sites = $wpdb->prefix . 'sitecure_sites';
+	$table_sites = $wpdb->prefix . 'hkymalvexa_sites';
 	if ( $wpdb->get_var( "SHOW TABLES LIKE '{$table_sites}'" ) === $table_sites ) {
 		$client_sites = $wpdb->get_results( "SELECT * FROM `{$table_sites}`" );
 		if ( ! empty( $client_sites ) ) {
 			foreach ( $client_sites as $cs ) {
 				$site_root = '';
-				if ( ! empty( $cs->wp_path ) && file_exists( $cs->wp_path ) ) {
-					$site_root = $cs->wp_path;
-				} elseif ( ! empty( $cs->wp_path ) && file_exists( dirname( ABSPATH ) . '/' . ltrim( $cs->wp_path, '/\\' ) ) ) {
-					$site_root = dirname( ABSPATH ) . '/' . ltrim( $cs->wp_path, '/\\' );
-				} else {
-					$url_path = wp_parse_url( $cs->url, PHP_URL_PATH );
-					if ( ! empty( $url_path ) ) {
-						$slug = trim( $url_path, '/' );
-						if ( ! empty( $slug ) && is_dir( dirname( ABSPATH ) . '/' . $slug ) ) {
-							$site_root = dirname( ABSPATH ) . '/' . $slug;
-						}
-					}
+				if ( ! empty( $cs->wp_path ) && @is_dir( $cs->wp_path ) ) {
+					$real      = realpath( $cs->wp_path );
+					$site_root = $real ? $real : $cs->wp_path;
 				}
 
 				if ( ! empty( $site_root ) ) {
 					$site_root = rtrim( str_replace( '\\', '/', $site_root ), '/' );
 					// Remove the quarantine directories on the client site
 					$client_quarantines = array(
-						$site_root . '/wp-content/uploads/sitecure-quarantine',
+						$site_root . '/wp-content/uploads/hkymalvexa-quarantine',
 					);
 					foreach ( $client_quarantines as $cq ) {
 						if ( is_dir( $cq ) ) {
-							sitecure_uninstall_recursive_rmdir( $cq );
+							hkymalvexa_uninstall_recursive_rmdir( $cq );
 						}
 					}
 				}
@@ -102,60 +93,60 @@ function sitecure_uninstall_purge_site_data() {
 	$upload_dir = wp_upload_dir();
 	if ( ! empty( $upload_dir['basedir'] ) ) {
 		$host_quarantines = array(
-			$upload_dir['basedir'] . '/sitecure-quarantine',
+			$upload_dir['basedir'] . '/hkymalvexa-quarantine',
 		);
 		foreach ( $host_quarantines as $hq ) {
 			if ( is_dir( $hq ) ) {
-				sitecure_uninstall_recursive_rmdir( $hq );
+				hkymalvexa_uninstall_recursive_rmdir( $hq );
 			}
 		}
 	}
 	$root_quarantines = array(
-		$host_root . '/wp-content/uploads/sitecure-quarantine',
+		$host_root . '/wp-content/uploads/hkymalvexa-quarantine',
 	);
 	foreach ( $root_quarantines as $rq ) {
 		if ( is_dir( $rq ) ) {
-			sitecure_uninstall_recursive_rmdir( $rq );
+			hkymalvexa_uninstall_recursive_rmdir( $rq );
 		}
 	}
 
 	// 3. Clear any registered scheduled cron tasks
-	wp_clear_scheduled_hook( 'sitecure_scheduled_scan' );
+	wp_clear_scheduled_hook( 'hkymalvexa_scheduled_scan' );
 
 	// 4. Delete all options, settings, and transients from wp_options
 	$wpdb->query(
 		"DELETE FROM `{$wpdb->options}` 
-		WHERE option_name LIKE 'sitecure_%' 
-		   OR option_name LIKE '_transient_sitecure_%' 
-		   OR option_name LIKE '_transient_timeout_sitecure_%'"
+		WHERE option_name LIKE 'hkymalvexa_%' 
+		   OR option_name LIKE '_transient_hkymalvexa_%' 
+		   OR option_name LIKE '_transient_timeout_hkymalvexa_%'"
 	);
 
 	// Multisite network sitemeta cleanup if table exists
 	if ( ! empty( $wpdb->sitemeta ) ) {
 		$wpdb->query(
 			"DELETE FROM `{$wpdb->sitemeta}`
-			WHERE meta_key LIKE 'sitecure_%'
-			   OR meta_key LIKE '_transient_sitecure_%'
-			   OR meta_key LIKE '_transient_timeout_sitecure_%'"
+			WHERE meta_key LIKE 'hkymalvexa_%'
+			   OR meta_key LIKE '_transient_hkymalvexa_%'
+			   OR meta_key LIKE '_transient_timeout_hkymalvexa_%'"
 		);
 	}
 
 	// 5. Drop all custom database tables
 	$tables = array(
-		$wpdb->prefix . 'sitecure_sites',
-		$wpdb->prefix . 'sitecure_connections',
-		$wpdb->prefix . 'sitecure_scans',
-		$wpdb->prefix . 'sitecure_findings',
-		$wpdb->prefix . 'sitecure_quarantine',
-		$wpdb->prefix . 'sitecure_audit_logs',
+		$wpdb->prefix . 'hkymalvexa_sites',
+		$wpdb->prefix . 'hkymalvexa_connections',
+		$wpdb->prefix . 'hkymalvexa_scans',
+		$wpdb->prefix . 'hkymalvexa_findings',
+		$wpdb->prefix . 'hkymalvexa_quarantine',
+		$wpdb->prefix . 'hkymalvexa_audit_logs',
 	);
 
 	foreach ( $tables as $table ) {
 		$wpdb->query( "DROP TABLE IF EXISTS `{$table}`" );
 	}
 
-	// Dynamic fallback: Drop any remaining tables starting with prefix + sitecure_
-	$wildcard_tables = $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->prefix}sitecure_%'" );
+	// Dynamic fallback: Drop any remaining tables starting with prefix + hkymalvexa_
+	$wildcard_tables = $wpdb->get_col( "SHOW TABLES LIKE '{$wpdb->prefix}hkymalvexa_%'" );
 	if ( ! empty( $wildcard_tables ) ) {
 		foreach ( $wildcard_tables as $tbl ) {
 			$wpdb->query( "DROP TABLE IF EXISTS `{$tbl}`" );
@@ -169,12 +160,12 @@ if ( is_multisite() ) {
 	if ( ! empty( $sites ) ) {
 		foreach ( $sites as $site ) {
 			switch_to_blog( (int) $site->blog_id );
-			sitecure_uninstall_purge_site_data();
+			hkymalvexa_uninstall_purge_site_data();
 			restore_current_blog();
 		}
 	} else {
-		sitecure_uninstall_purge_site_data();
+		hkymalvexa_uninstall_purge_site_data();
 	}
 } else {
-	sitecure_uninstall_purge_site_data();
+	hkymalvexa_uninstall_purge_site_data();
 }

@@ -1,11 +1,11 @@
 /**
- * SiteCure Admin JavaScript Controller
+ * HKY MalVexa Admin JavaScript Controller
  * Pure vanilla jQuery handling chunked batched scanning, modals, and actions
  */
 (function ($) {
   'use strict';
 
-  var sitecure_data = window.sitecure_data || {};
+  var hkymalvexa_data = window.hkymalvexa_data || {};
   var currentScanId = 0;
   var isScanning = false;
 
@@ -15,11 +15,18 @@
       e.preventDefault();
       if (isScanning) return;
 
-      var siteId = $('#wpd-select-site').val() || 1;
+      var siteId = $('#wpd-current-site-id').val() || 1;
       var scanType = $('#wpd-select-type').val() || 'deep';
 
       startScan(siteId, scanType);
     });
+
+    // Auto-start scan if triggered from dashboard
+    if (new URLSearchParams(window.location.search).get('autostart') === '1') {
+      setTimeout(function () {
+        $('#wpd-btn-start-scan').trigger('click');
+      }, 300);
+    }
 
     // 2. View Code Modal
     $(document).on('click', '.wpd-btn-view-code', function (e) {
@@ -42,15 +49,15 @@
       var btn = $(this);
       var findingId = btn.data('id');
 
-      if (!confirm('Are you sure you want to clean this threat? SiteCure will create a safety backup in Quarantine Vault and safely neutralize the malicious code/spam.')) {
+      if (!confirm('Are you sure you want to clean this threat? HKY MalVexa will create a safety backup in Quarantine Vault and safely neutralize the malicious code/spam.')) {
         return;
       }
 
       btn.prop('disabled', true).text('Cleaning...');
 
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_clean_file',
-        nonce: sitecure_data.nonce,
+      $.post(hkymalvexa_data.ajax_url, {
+        action: 'hkymalvexa_clean_file',
+        nonce: hkymalvexa_data.nonce,
         finding_id: findingId
       }, function (res) {
         if (res.success) {
@@ -69,15 +76,15 @@
       var btn = $(this);
       var findingId = btn.data('id');
 
-      if (!confirm(sitecure_data.strings.confirm_q)) {
+      if (!confirm(hkymalvexa_data.strings.confirm_q)) {
         return;
       }
 
       btn.prop('disabled', true).text('Quarantining...');
 
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_quarantine_file',
-        nonce: sitecure_data.nonce,
+      $.post(hkymalvexa_data.ajax_url, {
+        action: 'hkymalvexa_quarantine_file',
+        nonce: hkymalvexa_data.nonce,
         finding_id: findingId
       }, function (res) {
         if (res.success) {
@@ -96,15 +103,15 @@
       var btn = $(this);
       var qId = btn.data('id');
 
-      if (!confirm(sitecure_data.strings.confirm_r)) {
+      if (!confirm(hkymalvexa_data.strings.confirm_r)) {
         return;
       }
 
       btn.prop('disabled', true).text('Restoring...');
 
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_restore_file',
-        nonce: sitecure_data.nonce,
+      $.post(hkymalvexa_data.ajax_url, {
+        action: 'hkymalvexa_restore_file',
+        nonce: hkymalvexa_data.nonce,
         quarantine_id: qId
       }, function (res) {
         if (res.success) {
@@ -128,15 +135,15 @@
       var filePath = btn.data('path');
       var siteId = btn.data('site') || 0;
 
-      if (!confirm(sitecure_data.strings.confirm_c)) {
+      if (!confirm(hkymalvexa_data.strings.confirm_c)) {
         return;
       }
 
       btn.prop('disabled', true).text('Downloading...');
 
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_repair_core',
-        nonce: sitecure_data.nonce,
+      $.post(hkymalvexa_data.ajax_url, {
+        action: 'hkymalvexa_repair_core',
+        nonce: hkymalvexa_data.nonce,
         file_path: filePath,
         site_id: siteId
       }, function (res) {
@@ -156,9 +163,9 @@
       var btn = $(this);
       btn.prop('disabled', true).text('Verifying...');
 
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_verify_site',
-        nonce: sitecure_data.nonce
+      $.post(hkymalvexa_data.ajax_url, {
+        action: 'hkymalvexa_verify_site',
+        nonce: hkymalvexa_data.nonce
       }, function (res) {
         btn.prop('disabled', false).text('Run Health Verification');
         if (res.success) {
@@ -174,156 +181,10 @@
       });
     });
 
-    // 7. Add Site Form Toggle & Submit (Quota Protected)
-    $('#wpd-btn-show-add-site').on('click', function () {
-      var canAdd = $(this).data('can-add');
-      if (canAdd === 0 || canAdd === '0') {
-        $('#wpd-pro-upgrade-modal').addClass('is-active').css('display', 'flex').hide().fadeIn(150);
-      } else {
-        $('#wpd-add-site-card').slideToggle(200);
-      }
-    });
-
-    $(document).on('click', '#wpd-btn-onboard-external', function () {
-      $('#wpd-add-site-card').slideDown(200);
-      $('html, body').animate({ scrollTop: $('#wpd-add-site-card').offset().top - 80 }, 300);
-    });
-
-    $(document).on('click', '.wpd-btn-open-pro-modal', function () {
-      $('#wpd-pro-upgrade-modal').addClass('is-active').css('display', 'flex').hide().fadeIn(150);
-    });
-
+    // Modal Close
     $(document).on('click', '.wpd-modal-close', function () {
       $(this).closest('.wpd-modal-backdrop').fadeOut(150, function () {
         $(this).removeClass('is-active');
-      });
-    });
-
-    // 1-Click Register Local Hosted Site
-    $(document).on('click', '#wpd-btn-register-local', function (e) {
-      e.preventDefault();
-      var btn = $(this);
-      btn.prop('disabled', true).text('Registering site...');
-
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_register_local_site',
-        nonce: sitecure_data.nonce
-      }, function (res) {
-        if (res.success) {
-          alert(res.data.message);
-          window.location.href = 'admin.php?page=sitecure-findings&site_id=' + res.data.site_id;
-        } else {
-          alert('Error: ' + (res.data ? res.data.message : 'Could not register site.'));
-          btn.prop('disabled', false).html('<span class="dashicons dashicons-controls-play"></span> Scan This Hosted Website');
-        }
-      });
-    });
-
-    // Delete Site
-    $(document).on('click', '.wpd-btn-delete-site', function (e) {
-      e.preventDefault();
-      var btn = $(this);
-      var siteId = btn.data('id');
-      var siteName = btn.data('name');
-
-      if (!confirm('Are you sure you want to remove "' + siteName + '"? This will free up your active site slot.')) {
-        return;
-      }
-
-      btn.prop('disabled', true);
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_delete_site',
-        nonce: sitecure_data.nonce,
-        site_id: siteId
-      }, function (res) {
-        if (res.success) {
-          alert(res.data.message);
-          location.reload();
-        } else {
-          alert('Error: ' + (res.data ? res.data.message : 'Could not delete site.'));
-          btn.prop('disabled', false);
-        }
-      });
-    });
-
-    // Pro Waitlist Opt-in
-    $(document).on('click', '#wpd-btn-join-pro', function (e) {
-      e.preventDefault();
-      var email = $('#wpd-pro-email').val().trim();
-      if (!email) {
-        alert('Please enter your email address.');
-        return;
-      }
-      $('#wpd-pro-waitlist-msg').html('<span class="dashicons dashicons-yes" style="color:#059669;vertical-align:middle;"></span> Thank you! You are on the early VIP Pro waitlist.').fadeIn();
-      $('#wpd-btn-join-pro').prop('disabled', true).text('Added!');
-    });
-
-    // Activate License Key
-    $(document).on('click', '#wpd-btn-activate-license', function (e) {
-      e.preventDefault();
-      var key = $('#wpd-license-key').val().trim();
-      if (!key) {
-        alert('Please enter a license key.');
-        return;
-      }
-      var btn = $(this);
-      btn.prop('disabled', true).text('Activating...');
-
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_activate_license',
-        nonce: sitecure_data.nonce,
-        license_key: key
-      }, function (res) {
-        if (res.success) {
-          $('#wpd-license-status-msg').css('color', '#059669').text(res.data.message).show();
-          setTimeout(function () {
-            location.reload();
-          }, 900);
-        } else {
-          $('#wpd-license-status-msg').css('color', '#dc2626').text(res.data ? res.data.message : 'Activation failed.').show();
-          btn.prop('disabled', false).text('Activate Key');
-        }
-      });
-    });
-
-    // Deactivate License Key (1-Click revert to Free plan)
-    $(document).on('click', '#wpd-btn-deactivate-license', function (e) {
-      e.preventDefault();
-      if (!confirm('Are you sure you want to deactivate your license and revert back to the Free plan (1 active site)?')) {
-        return;
-      }
-      var btn = $(this);
-      btn.prop('disabled', true).text('Deactivating...');
-
-      $.post(sitecure_data.ajax_url, {
-        action: 'sitecure_deactivate_license',
-        nonce: sitecure_data.nonce
-      }, function (res) {
-        if (res.success) {
-          location.reload();
-        } else {
-          alert(res.data ? res.data.message : 'Deactivation failed.');
-          btn.prop('disabled', false).text('Deactivate Key');
-        }
-      });
-    });
-
-    $('#wpd-form-add-site').on('submit', function (e) {
-      e.preventDefault();
-      var form = $(this);
-      var data = form.serialize() + '&action=sitecure_save_site&nonce=' + sitecure_data.nonce;
-
-      $.post(sitecure_data.ajax_url, data, function (res) {
-        if (res.success) {
-          alert(res.data.message);
-          location.reload();
-        } else {
-          if (res.data && res.data.code === 'quota_reached') {
-            $('#wpd-pro-upgrade-modal').addClass('is-active').css('display', 'flex').hide().fadeIn(150);
-          } else {
-            alert('Error: ' + (res.data ? res.data.message : 'Unknown error'));
-          }
-        }
       });
     });
   });
@@ -337,9 +198,9 @@
     $('#wpd-scan-terminal').empty();
     logTerminal('Initializing emergency scan pipeline...', 'log-warning');
 
-    $.post(sitecure_data.ajax_url, {
-      action: 'sitecure_start_scan',
-      nonce: sitecure_data.nonce,
+    $.post(hkymalvexa_data.ajax_url, {
+      action: 'hkymalvexa_start_scan',
+      nonce: hkymalvexa_data.nonce,
       site_id: siteId,
       scan_type: scanType
     }, function (res) {
@@ -370,9 +231,9 @@
    * Process scan in batches of files
    */
   function runBatch(scanId, batchSize) {
-    $.post(sitecure_data.ajax_url, {
-      action: 'sitecure_batch_scan',
-      nonce: sitecure_data.nonce,
+    $.post(hkymalvexa_data.ajax_url, {
+      action: 'hkymalvexa_batch_scan',
+      nonce: hkymalvexa_data.nonce,
       scan_id: scanId,
       batch_size: batchSize
     }, function (res) {
@@ -434,9 +295,9 @@
     // Enforce centered viewport modal
     $('#wpd-code-modal').addClass('is-active').css('display', 'flex').hide().fadeIn(150);
 
-    $.post(sitecure_data.ajax_url, {
-      action: 'sitecure_view_code',
-      nonce: sitecure_data.nonce,
+    $.post(hkymalvexa_data.ajax_url, {
+      action: 'hkymalvexa_view_code',
+      nonce: hkymalvexa_data.nonce,
       finding_id: findingId
     }, function (res) {
       if (res.success) {

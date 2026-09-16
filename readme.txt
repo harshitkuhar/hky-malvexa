@@ -1,5 +1,5 @@
-=== SiteCure ===
-Contributors: harshitkuhar
+=== HKY MalVexa ===
+Contributors: harshit1992
 Donate link: https://github.com/harshitkuhar
 Tags: malware scanner, security, clean malware, seo spam, quarantine
 Requires at least: 6.0
@@ -13,9 +13,9 @@ Surgical WordPress malware scanner, blackhat SEO & casino spam cleaner, core int
 
 == Description ==
 
-**SiteCure** is a professional-grade WordPress security platform designed for emergency diagnosis, malware investigation, surgical threat neutralization, and recovery.
+**HKY MalVexa** is a professional-grade WordPress security platform designed for emergency diagnosis, malware investigation, surgical threat neutralization, and recovery.
 
-Unlike generic security plugins that overwhelm your dashboard with complex configuration settings or lock you out of your own site, SiteCure focuses on **surgical threat detection and immediate recovery**:
+Unlike generic security plugins that overwhelm your dashboard with complex configuration settings or lock you out of your own site, HKY MalVexa focuses on **surgical threat detection and immediate recovery**:
 
 * **Zero-Timeout Batched Scanning**: Process large file structures and heavy databases without server timeouts, memory exhaustion, or 504 Gateway errors.
 * **Blackhat SEO & Casino Spam Cleaner**: Detects and cleans hidden Japanese keywords, casino/gambling redirects, cloaked spam links, and obfuscated iframes from post contents and Elementor/Gutenberg metadata without corrupting page layouts.
@@ -40,42 +40,50 @@ Unlike generic security plugins that overwhelm your dashboard with complex confi
    - Quarantined files are neutralized and moved outside the public web root with PHP execution disabled.
    - 1-click restore instantly writes the pristine backup back to disk or recovers the original post content.
 5. **Multi-Site Portfolio Ready**:
-   - Free plan includes 1 active target site.
+   - Manage and scan your hosted WordPress site with zero artificial limitations.
    - Connect client websites via local filesystem paths or secure SFTP connections for agency management.
 
 ### Privacy, Data Ownership & Security Policy
 
 * **Zero External Data Storage**: We do **not** save or store any of your website files, database records, audit logs, scan results, or server passwords on our servers.
 * **Hosted Site Security**: When scanning and repairing your hosted WordPress site, everything is processed and saved strictly on your own web hosting server.
-* **External Client Websites (Pro)**: When managing an external client website via SFTP/SSH, all scan reports, findings, and quarantine backups are saved directly on the external website's server. No files or private site contents are ever sent to our servers.
+* **External Client Websites**: When managing an external client website via SFTP/SSH, all scan reports, findings, and quarantine backups are saved directly on the external website's server. No files or private site contents are ever sent to our servers.
 * **Double Security Best Practice**: While SFTP/SSH credentials in your database are AES-256 encrypted using your site's private WordPress salts, we always recommend updating or changing the FTP/SSH password on the external server once malware cleanup is finished for double security.
+
+== External Services ==
+
+This plugin connects to the official WordPress.org Core Checksum API exclusively during core integrity verification:
+* **Service**: Official WordPress.org Core Checksum API (https://api.wordpress.org/core/checksums/1.0/)
+* **Purpose**: Fetches official cryptographic hashes for pristine WordPress core files corresponding to your installed WordPress version and locale to detect modified or infected core files.
+* **Data Sent**: WordPress core version and locale (e.g., `version=6.6.1&locale=en_US`). No personal data, credentials, file contents, or server details are sent.
+* **Terms & Privacy**: Provided by the WordPress Foundation under the official WordPress.org Privacy Policy: https://wordpress.org/about/privacy/
 
 == Installation ==
 
-1. Upload the `sitecure` folder to the `/wp-content/plugins/` directory, or install the ZIP file via **Plugins > Add New > Upload Plugin**.
+1. Upload the `hky-malvexa` folder to the `/wp-content/plugins/` directory, or install the ZIP file via **Plugins > Add New > Upload Plugin**.
 2. Activate the plugin through the **Plugins** menu in WordPress.
-3. Navigate to **SiteCure** in your WordPress admin menu to access your Dashboard.
+3. Navigate to **HKY MalVexa** in your WordPress admin menu to access your Dashboard.
 4. Click **Start Emergency Scan** to immediately inspect your website for threats and malware.
 
 == Frequently Asked Questions ==
 
-= Does SiteCure modify or delete files without permission? =
-No. SiteCure never modifies or deletes any file without your explicit action. When you choose to quarantine or clean an infected file, SiteCure creates a timestamped safety backup in an isolated storage vault before making any changes.
+= Does HKY MalVexa modify or delete files without permission? =
+No. HKY MalVexa never modifies or deletes any file without your explicit action. When you choose to quarantine or clean an infected file, HKY MalVexa creates a timestamped safety backup in an isolated storage vault before making any changes.
 
 = Can I restore a quarantined file if it causes an issue? =
-Yes. Navigate to **SiteCure > Quarantine Vault** or the **Scan & Findings** screen. Any quarantined file or cleaned database snippet can be restored to its exact original location with a single click.
+Yes. Navigate to **HKY MalVexa > Quarantine Vault** or the **Scan & Findings** screen. Any quarantined file or cleaned database snippet can be restored to its exact original location with a single click.
 
 = How does the Blackhat SEO spam cleaner work? =
-Attackers often inject spam links, hidden gambling keywords (e.g. slot88, casino, sbobet), or hidden off-screen divs (`position:absolute;left:-9999px`) into your post contents or Elementor data. SiteCure surgically strips out the malicious markup and restores your original content without breaking your page layout or styling.
+Attackers often inject spam links, hidden gambling keywords (e.g. slot88, casino, sbobet), or hidden off-screen divs (`position:absolute;left:-9999px`) into your post contents or Elementor data. HKY MalVexa surgically strips out the malicious markup and restores your original content without breaking your page layout or styling.
 
 = What is Core Integrity Repair? =
-SiteCure downloads official cryptographic checksums from the WordPress.org API for your exact WordPress version. If any core file (e.g. `wp-login.php`, `wp-settings.php`, `wp-includes/`) has been modified by malware, you can replace it with a pristine official copy from WordPress.org with one click.
+HKY MalVexa downloads official cryptographic checksums from the WordPress.org API for your exact WordPress version. If any core file (e.g. `wp-login.php`, `wp-settings.php`, `wp-includes/`) has been modified by malware, you can replace it with a pristine official copy from WordPress.org with one click.
 
-= Does SiteCure connect to external cloud services? =
-SiteCure is fully operational standalone on your server. For multi-site management and license validation, SiteCure optionally connects to the SiteCure Cloud Verification microservice to verify domain quotas and active plan status.
+= Does HKY MalVexa connect to external cloud services? =
+HKY MalVexa is 100% self-hosted and fully operational standalone on your server. It does not phone home, track usage, or send your website data to any third-party server. The only external network call is to the official WordPress.org API (api.wordpress.org) during core integrity scans to fetch official file checksums for your WordPress version.
 
-= Where is scan data, database info, and server credentials stored? =
-We do not store your files, scan results, or server passwords on our servers. When scanning your hosted site, everything stays on your own hosting server. When managing external client sites, all files and scan reports are saved directly on the client's external server. Even though credentials in your database are AES-256 encrypted using your WordPress salts, we always recommend updating or changing the FTP/SSH password on the external server once malware cleanup is complete for double security.
+= Where is scan data and database info stored? =
+We do not store your files, scan results, or database information on any external servers. Everything is processed and stored strictly on your own local hosting server.
 
 == Screenshots ==
 
@@ -84,7 +92,7 @@ We do not store your files, scan results, or server passwords on our servers. Wh
 3. **Threat Findings & Evidence**: Detailed catalog of detected malware, backdoors, and SEO spam with severity badges.
 4. **Interactive Code Inspector**: Preview infected code with exact line markers and 1-click remediation actions.
 5. **Quarantine Storage Vault**: Isolated, `.htaccess`-protected storage vault with 1-click rollback.
-6. **Managed Sites Portfolio**: Multi-site portfolio manager supporting local and client WordPress sites.
+6. **Incident & Audit Trail**: Immutable log of all scan diagnostics, threat quarantines, and core restorations.
 
 == Changelog ==
 
